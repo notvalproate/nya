@@ -1,2 +1,1 @@
-# nya
-Nanological Yeildable Asset Image File Format
+# nya - Nanological Yeildable Asset Image File Format
