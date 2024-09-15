@@ -38,7 +38,10 @@ class NyaApp:
     def setup_convert(self):
         for widget in self.root.winfo_children():
             widget.destroy()
-        
+    
+        back_button = tk.Button(self.root, text="Back", command=self.setup_home)
+        back_button.place(x=10, y=10)
+
         select_frame = tk.Frame(self.root)
         select_frame.pack(expand=True)
 
