@@ -2,8 +2,14 @@ import tkinter as tk
 import os
 from tkinter import filedialog
 from PIL import Image, ImageTk
+import engine
 
 class NyaApp:
+    root = tk.Tk
+    current_file = tk.StringVar
+    output_dir = tk.StringVar
+    view_file = tk.StringVar
+
     def __init__(self):
         # Initialize the Tkinter window
         self.root = tk.Tk()
@@ -30,7 +36,7 @@ class NyaApp:
 
         self.setup_home()
 
-    def setup_home(self):
+    def setup_home(self) -> None:
         for widget in self.root.winfo_children():
             widget.destroy()
 
@@ -43,7 +49,7 @@ class NyaApp:
         view_nya_button = tk.Button(options_frame, text="View NYA file", command=self.setup_view)
         view_nya_button.pack(pady=10)
 
-    def setup_convert(self):
+    def setup_convert(self) -> None:
         for widget in self.root.winfo_children():
             widget.destroy()
     
@@ -75,10 +81,10 @@ class NyaApp:
         dir_label = tk.Label(select_frame, textvariable=self.output_dir)
         dir_label.pack(pady=10)
 
-        convert_button = tk.Button(select_frame, text="Convert")
+        convert_button = tk.Button(select_frame, text="Convert", command=lambda: engine.convert_to_nya(self.current_file.get(), self.output_dir.get()))
         convert_button.pack(pady=10)
     
-    def setup_view(self):
+    def setup_view(self) -> None:
         for widget in self.root.winfo_children():
             widget.destroy()
     
@@ -88,7 +94,7 @@ class NyaApp:
         select_frame = tk.Frame(self.root)
         select_frame.pack(expand=True)
 
-        def get_file():
+        def get_file() -> None:
             path = filedialog.askopenfilename(title="Select a file", filetypes=[("NYA Image file", "*.nya")])
             if path:
                 self.view_file.set(os.path.normpath(path))
@@ -102,5 +108,5 @@ class NyaApp:
         view_button = tk.Button(select_frame, text="View Image")
         view_button.pack(pady=10)
 
-    def run(self):
+    def run(self) -> None:
         self.root.mainloop()
