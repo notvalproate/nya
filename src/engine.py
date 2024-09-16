@@ -1,4 +1,5 @@
 from PIL import Image
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 
@@ -12,10 +13,14 @@ class ImageData:
         self.width, self.height = img.size
         img = img.convert("RGBA")
         self.pixels = np.array(img)
-
+    
 def convert_to_nya(image_path: str, output_dir: str) -> None:
     image_data = ImageData(image_path)
 
+    # Display image for testing
+    plt.imshow(image_data.pixels)
+    plt.axis('off')
+    plt.show()
 
     file_name = image_path.split(os.sep)[-1].split(".")[0]
     output_file = f'{output_dir}{os.sep}{file_name}.nya'
