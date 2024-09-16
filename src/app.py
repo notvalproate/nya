@@ -105,7 +105,7 @@ class NyaApp:
         file_label = tk.Label(select_frame, textvariable=self.view_file)
         file_label.pack(pady=10)
 
-        view_button = tk.Button(select_frame, text="View Image")
+        view_button = tk.Button(select_frame, text="View Image", command=lambda: engine.display_nya_file(self.view_file.get()))
         view_button.pack(pady=10)
 
     def run(self) -> None:

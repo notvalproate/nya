@@ -13,14 +13,17 @@ class ImageData:
         self.width, self.height = img.size
         img = img.convert("RGBA")
         self.pixels = np.array(img)
+
+def display_image_pixels(pixels: np.array) -> None:
+    plt.imshow(pixels)
+    plt.axis('off')
+    plt.show()
     
 def convert_to_nya(image_path: str, output_dir: str) -> None:
     image_data = ImageData(image_path)
 
     # Display image for testing
-    plt.imshow(image_data.pixels)
-    plt.axis('off')
-    plt.show()
+    display_image_pixels(image_data.pixels)
 
     file_name = image_path.split(os.sep)[-1].split(".")[0]
     output_file = f'{output_dir}{os.sep}{file_name}.nya'
@@ -33,6 +36,16 @@ def convert_to_nya(image_path: str, output_dir: str) -> None:
         f.write(height_bytes)
 
         pixels_flat = image_data.pixels.flatten()
-        pixel_data = pixels_flat.astype(np.int8).tobytes()
+        pixel_data = pixels_flat.astype(np.uint8).tobytes()
 
         f.write(pixel_data)
+
+def display_nya_file(nya_file: str) -> None:
+    with open(nya_file, "rb") as f:
+        width = int.from_bytes(f.read(16), byteorder="big")
+        height = int.from_bytes(f.read(16), byteorder="big")
+
+        pixel_data = f.read()
+        pixels = np.frombuffer(pixel_data, dtype=np.uint8).reshape((height, width, 4))
+
+        display_image_pixels(pixels)
