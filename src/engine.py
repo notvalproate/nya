@@ -2,6 +2,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+from bitarray import bitarray
 
 class ImageData:
     width = int
@@ -16,15 +17,52 @@ class ImageData:
 
 # a compression/encoding algorithm that compresses the data in some way or the other
 def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
-    pixels_flat = pixels.flatten()
-    pixel_data = pixels_flat.astype(np.uint8).tobytes()
-    return pixel_data
+    pixels_flat = pixels.reshape(-1, pixels.shape[-1])
+    pixels_data = bitarray(endian="big")
+
+    i = 0
+    previous_pixel = pixels_flat[0]
+    pixel_count = len(pixels_flat)
+
+    while i < pixel_count:
+        count = 0
+
+        while count <= 256 and i < pixel_count and np.array_equal(pixels_flat[i], previous_pixel):
+            count += 1
+            i += 1
+
+        if count == 0:
+            pixels_data.extend([0])
+
+            pixels_data.frombytes(pixels_flat[i][:3].tobytes())
+            previous_pixel = pixels_flat[i]
+        else:
+            pixels_data.extend([1])
+
+            adjusted_count = count - 1
+            count_length = adjusted_count.bit_length()
+            length_length = count_length.bit_length()
+
+            count_str = f'{adjusted_count:0{count_length}b}'
+            length_str = f'{length_length:03b}'
+
+            # Add Length for 3 bits
+            pixels_data.extend([int(bit) for bit in length_str])
+            # Add Count for count_length bits
+            pixels_data.extend([int(bit) for bit in count_str])
+
+            i -+ 1
+            
+        i += 1
+
+    return pixels_data.tobytes()
 
 # a decompression/decoding algorithm that decompresses the data in some way or the other
 def nya_bytes_to_nparray(nya_bytes: bytes, width: int, height: int) -> np.array:
     return np.frombuffer(nya_bytes, dtype=np.uint8).reshape((height, width, 4))
 
-def display_image_pixels(pixels: np.array) -> None:
+def display_image_pixels(pixels: np.array, path: str) -> None:
+    plt.gcf().canvas.manager.set_window_title(path)
     plt.imshow(pixels)
     plt.axis('off')
     plt.show()
@@ -54,4 +92,4 @@ def display_nya_file(nya_file: str) -> None:
         pixel_data = f.read()
         pixels = nya_bytes_to_nparray(pixel_data, width, height)
 
-        display_image_pixels(pixels)
+        display_image_pixels(pixels, nya_file)
