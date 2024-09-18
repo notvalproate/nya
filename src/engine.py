@@ -1,3 +1,6 @@
+from typing import List
+from numpy.typing import NDArray
+
 from PIL import Image
 import numpy as np
 import os
@@ -21,7 +24,7 @@ class NYA_HEADER:
         self.WIDTH = 0 # 16 BITS
 
 class NYA_SINGLE:
-    def __init__(self, value):
+    def __init__(self, value: NDArray[np.uint8]):
         pass
 
 def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
@@ -101,7 +104,7 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
 
     return pixels_data.tobytes()
     
-def convert_to_nya(image_path: str, output_dir: str) -> None:
+def convert_to_nya(image_path: str, output_dir: str) -> bool:
     image_data = ImageData(image_path)
 
     file_name = image_path.split(os.sep)[-1].split(".")[0]
@@ -117,3 +120,5 @@ def convert_to_nya(image_path: str, output_dir: str) -> None:
         pixel_data = nparray_to_nya_bytes(image_data.pixels, image_data.width, image_data.height)
 
         f.write(pixel_data)
+
+    return True
