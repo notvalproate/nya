@@ -1,9 +1,11 @@
 from numpy.typing import NDArray
+from abc import ABC, abstractmethod
 
 from PIL import Image
 import numpy as np
 import os
 from bitarray import bitarray
+
 
 class NYA_HEADER:
     def __init__(self):
@@ -11,23 +13,56 @@ class NYA_HEADER:
         self.VERTICAL_ENCODING = False # ONE BIT
         self.WIDTH = 0 # 16 BITS
 
-class NYA_SINGLE:
+
+class NYA_BLOCK(ABC):
+    @abstractmethod
+    def to_bytes(self) -> bytes:
+        pass
+
+
+class NYA_SINGLE(NYA_BLOCK):
+    tag = bitarray([0, 0])
+
     def __init__(self, value: NDArray[np.uint8]):
         self.VALUE = value
 
+    def to_bytes(self) -> bytes:
+        return self.tag.frombytes(self.VALUE.tobytes())
+
+
 class NYA_RUN(NYA_SINGLE):
+    tag = bitarray([0, 1])
+
     def __init__(self, value: NDArray[np.uint8], length: int):
         super().__init__(value)
         self.LENGTH = length
 
-class NYA_SINGLE_HUFFMAN:
+    def to_bytes(self) -> bytes:
+        length_str = f'{self.LENGTH-1:06b}'
+        return self.tag.frombytes(self.VALUE.tobytes()).extend([int(bit) for bit in length_str])
+
+
+class NYA_SINGLE_HUFFMAN(NYA_BLOCK):
+    tag = bitarray([1, 0])
+
     def __init__(self, code: bitarray):
         self.CODE = code
 
+    def to_bytes(self) -> bytes:
+        return self.tag.extend(self.CODE)
+
+
 class NYA_RUN_HUFFMAN(NYA_SINGLE_HUFFMAN):
+    tag = bitarray([1, 1])
+
     def __init__(self, code: bitarray, length: int):
         super().__init__(code)
         self.LENGTH = length
+
+    def to_bytes(self) -> bytes:
+        length_str = f'{self.LENGTH-1:06b}'
+        return self.tag.extend(self.CODE).extend([int(bit) for bit in length_str])
+
 
 def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
     # STAGE 0: CREATE EMPTY HEADER WHICH WILL BE MODIFIED AS WE GO 
@@ -73,7 +108,7 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
         curr_pixel = pixels[ind]
         length = 1
 
-        while ind + length < pixel_count and length < 64 and np.array_equal(curr_pixel, pixels[ind + length]):
+        while ind + length < pixel_count and length <= 64 and np.array_equal(curr_pixel, pixels[ind + length]):
             length += 1
 
         if tuple(pixels[ind]) in nya_values:
