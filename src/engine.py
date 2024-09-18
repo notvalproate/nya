@@ -1,21 +1,9 @@
-from typing import List
 from numpy.typing import NDArray
 
 from PIL import Image
 import numpy as np
 import os
 from bitarray import bitarray
-
-class ImageData:
-    width = int
-    height = int
-    pixels = np.array
-
-    def __init__(self, path):
-        img = Image.open(path)
-        self.width, self.height = img.size
-        img = img.convert("RGBA")
-        self.pixels = np.array(img)
 
 class NYA_HEADER:
     def __init__(self):
@@ -45,7 +33,7 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
     # STAGE 0: CREATE EMPTY HEADER WHICH WILL BE MODIFIED AS WE GO 
     header = NYA_HEADER()
     header.WIDTH = width
-    
+
     # STAGE 1: DECIDE BETWEEN 3 OR 4 CHANNELS
 
     for row in pixels:
@@ -70,12 +58,29 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
             row[i] = diff
             i += 1
     
+    # STAGE 3.1: FLATTEN PIXELS AND TREAT IT AS 1D ARRAY
+    
+    pixels = pixels.reshape(-1, pixels.shape[-1])
+
     # STAGE 3: PERFORM RLE ENCODING AND STORE IT IN nya_pixels. nya_values WILL STORE THE COUNTS OF EACH DIFFERENCE/PIXEL
 
     nya_pixels = []
     nya_values = {}
-    # pixels = pixels.reshape(-1, pixels.shape[-1])
-    
+    ind = 0
+    pixel_count = len(pixels)
+
+    while ind < pixel_count:
+        curr_pixel = pixels[ind]
+        length = 1
+
+        while ind + length < pixel_count and length < 64 and np.array_equal(curr_pixel, pixels[ind + length]):
+            length += 1
+
+        if tuple(pixels[ind]) in nya_values:
+            nya_values[tuple(pixel)] += 1
+        else:
+            nya_values[tuple(pixel)] = 1
+
 
     # STAGE 4: PERFORM HUFFMAN ENCODING ON THE MOST COMMON 256 DIFFERENCES
 
@@ -122,19 +127,22 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
     return pixels_data.tobytes()
     
 def convert_to_nya(image_path: str, output_dir: str) -> bool:
-    image_data = ImageData(image_path)
+    img = Image.open(image_path)
+    width, height = img.size
+    img = img.convert("RGBA")
+    pixels = np.array(img)
 
     file_name = image_path.split(os.sep)[-1].split(".")[0]
     output_file = f'{output_dir}{os.sep}{file_name}.nya'
 
     with open(output_file, "wb") as f:
-        width_bytes = image_data.width.to_bytes(16, byteorder="big")
-        height_bytes = image_data.height.to_bytes(16, byteorder="big")
+        width_bytes = width.to_bytes(16, byteorder="big")
+        height_bytes = height.to_bytes(16, byteorder="big")
 
         f.write(width_bytes)
         f.write(height_bytes)
 
-        pixel_data = nparray_to_nya_bytes(image_data.pixels, image_data.width, image_data.height)
+        pixel_data = nparray_to_nya_bytes(pixels, width)
 
         f.write(pixel_data)
 
