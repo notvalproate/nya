@@ -15,8 +15,34 @@ class ImageData:
         img = img.convert("RGBA")
         self.pixels = np.array(img)
 
-# a compression/encoding algorithm that compresses the data in some way or the other
+class NYA_SINGLE:
+    def __init__(self, color: np.array):
+        pass
+
+
 def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
+    NYA_ALPHA_EXISTS = False
+    for row in pixels:
+        for pixel in row:
+            if pixel[3] != 255:
+                NYA_ALPHA_EXISTS = True
+                break
+
+    previous = np.array([255, 255, 255, 255])
+
+    for row in pixels:
+        i = 0
+        while i < len(row):
+            diff = row[i] - previous
+            previous = row[i].copy()
+            row[i] = diff
+            i += 1
+        
+    nya_pixels = []
+    nya_values = []
+
+    print(pixels)
+
     pixels_flat = pixels.reshape(-1, pixels.shape[-1])
     pixels_data = bitarray(endian="big")
 
@@ -34,7 +60,7 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
         if count == 0:
             pixels_data.extend([0])
 
-            pixels_data.frombytes(pixels_flat[i][:3].tobytes())
+            pixels_data.frombytes(pixels_flat[i].tobytes())
             previous_pixel = pixels_flat[i]
         else:
             pixels_data.extend([1])
@@ -46,7 +72,7 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
             count_str = f'{adjusted_count:0{count_length}b}'
             length_str = f'{length_length:03b}'
 
-            # Add Length for 3 bits
+            # Add Length for 4 bits
             pixels_data.extend([int(bit) for bit in length_str])
             # Add Count for count_length bits
             pixels_data.extend([int(bit) for bit in count_str])
@@ -57,7 +83,6 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
 
     return pixels_data.tobytes()
 
-# a decompression/decoding algorithm that decompresses the data in some way or the other
 def nya_bytes_to_nparray(nya_bytes: bytes, width: int, height: int) -> np.array:
     return np.frombuffer(nya_bytes, dtype=np.uint8).reshape((height, width, 4))
 
