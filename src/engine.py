@@ -25,21 +25,38 @@ class NYA_HEADER:
 
 class NYA_SINGLE:
     def __init__(self, value: NDArray[np.uint8]):
-        pass
+        self.VALUE = value
 
-def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
+class NYA_RUN(NYA_SINGLE):
+    def __init__(self, value: NDArray[np.uint8], length: int):
+        super().__init__(value)
+        self.LENGTH = length
+
+class NYA_SINGLE_HUFFMAN:
+    def __init__(self, code: bitarray):
+        self.CODE = code
+
+class NYA_RUN_HUFFMAN(NYA_SINGLE_HUFFMAN):
+    def __init__(self, code: bitarray, length: int):
+        super().__init__(code)
+        self.LENGTH = length
+
+def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
+    # STAGE 0: CREATE EMPTY HEADER WHICH WILL BE MODIFIED AS WE GO 
+    header = NYA_HEADER()
+    header.WIDTH = width
+    
     # STAGE 1: DECIDE BETWEEN 3 OR 4 CHANNELS
 
-    NYA_ALPHA_EXISTS = False
     for row in pixels:
         for pixel in row:
             if pixel[3] != 255:
-                NYA_ALPHA_EXISTS = True
+                header.ALPHA_ENCODING = True
                 break
 
     previous = np.array([255, 255, 255, 255])
 
-    if not NYA_ALPHA_EXISTS:
+    if not header.ALPHA_ENCODING:
         pixels = pixels[:, :, :3]
         previous = np.array([255, 255, 255])
 
@@ -57,7 +74,7 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
 
     nya_pixels = []
     nya_values = {}
-    pixels = pixels.reshape(-1, pixels.shape[-1])
+    # pixels = pixels.reshape(-1, pixels.shape[-1])
     
 
     # STAGE 4: PERFORM HUFFMAN ENCODING ON THE MOST COMMON 256 DIFFERENCES
