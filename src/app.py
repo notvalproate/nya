@@ -32,30 +32,10 @@ class NyaApp:
         
         self.current_file = tk.StringVar(self.root, "No File Selected")
         self.output_dir = tk.StringVar(self.root, os.getcwd() + os.sep + "outputs")
-        self.view_file = tk.StringVar(self.root, "No File Selected")
 
-        self.setup_home()
-
-    def setup_home(self) -> None:
-        for widget in self.root.winfo_children():
-            widget.destroy()
-
-        options_frame = tk.Frame(self.root)
-        options_frame.pack(expand=True)
-
-        convert_to_button = tk.Button(options_frame, text="Convert to NYA file", command=self.setup_convert)
-        convert_to_button.pack(pady=10)
-
-        view_nya_button = tk.Button(options_frame, text="View NYA file", command=self.setup_view)
-        view_nya_button.pack(pady=10)
+        self.setup_convert()
 
     def setup_convert(self) -> None:
-        for widget in self.root.winfo_children():
-            widget.destroy()
-    
-        back_button = tk.Button(self.root, text="Back", command=self.setup_home)
-        back_button.place(x=10, y=10)
-
         select_frame = tk.Frame(self.root)
         select_frame.pack(expand=True)
 
@@ -83,30 +63,6 @@ class NyaApp:
 
         convert_button = tk.Button(select_frame, text="Convert", command=lambda: engine.convert_to_nya(self.current_file.get(), self.output_dir.get()))
         convert_button.pack(pady=10)
-    
-    def setup_view(self) -> None:
-        for widget in self.root.winfo_children():
-            widget.destroy()
-    
-        back_button = tk.Button(self.root, text="Back", command=self.setup_home)
-        back_button.place(x=10, y=10)
-
-        select_frame = tk.Frame(self.root)
-        select_frame.pack(expand=True)
-
-        def get_file() -> None:
-            path = filedialog.askopenfilename(title="Select a file", filetypes=[("NYA Image file", "*.nya")])
-            if path:
-                self.view_file.set(os.path.normpath(path))
-
-        select_file = tk.Button(select_frame, text="Select file", command=get_file)
-        select_file.pack(pady=10)
-
-        file_label = tk.Label(select_frame, textvariable=self.view_file)
-        file_label.pack(pady=10)
-
-        view_button = tk.Button(select_frame, text="View Image", command=lambda: engine.display_nya_file(self.view_file.get()))
-        view_button.pack(pady=10)
 
     def run(self) -> None:
         self.root.mainloop()

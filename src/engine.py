@@ -1,5 +1,4 @@
 from PIL import Image
-import matplotlib.pyplot as plt
 import numpy as np
 import os
 from bitarray import bitarray
@@ -15,12 +14,19 @@ class ImageData:
         img = img.convert("RGBA")
         self.pixels = np.array(img)
 
+class NYA_HEADER:
+    def __init__(self):
+        self.ALPHA_ENCODING = False # ONE BIT
+        self.VERTICAL_ENCODING = False # ONE BIT
+        self.WIDTH = 0 # 16 BITS
+
 class NYA_SINGLE:
-    def __init__(self, color: np.array):
+    def __init__(self, value):
         pass
 
-
 def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
+    # STAGE 1: DECIDE BETWEEN 3 OR 4 CHANNELS
+
     NYA_ALPHA_EXISTS = False
     for row in pixels:
         for pixel in row:
@@ -30,6 +36,12 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
 
     previous = np.array([255, 255, 255, 255])
 
+    if not NYA_ALPHA_EXISTS:
+        pixels = pixels[:, :, :3]
+        previous = np.array([255, 255, 255])
+
+    # STAGE 2: APPLY THE DIFFERENCE FILTER
+
     for row in pixels:
         i = 0
         while i < len(row):
@@ -37,11 +49,17 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
             previous = row[i].copy()
             row[i] = diff
             i += 1
-        
-    nya_pixels = []
-    nya_values = []
+    
+    # STAGE 3: PERFORM RLE ENCODING AND STORE IT IN nya_pixels. nya_values WILL STORE THE COUNTS OF EACH DIFFERENCE/PIXEL
 
-    print(pixels)
+    nya_pixels = []
+    nya_values = {}
+    pixels = pixels.reshape(-1, pixels.shape[-1])
+    
+
+    # STAGE 4: PERFORM HUFFMAN ENCODING ON THE MOST COMMON 256 DIFFERENCES
+
+    # STAGE 5: WRITE EVERYTHING TO A BITARRAY AND THEN RETURN THE BYTES
 
     pixels_flat = pixels.reshape(-1, pixels.shape[-1])
     pixels_data = bitarray(endian="big")
@@ -82,15 +100,6 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
         i += 1
 
     return pixels_data.tobytes()
-
-def nya_bytes_to_nparray(nya_bytes: bytes, width: int, height: int) -> np.array:
-    return np.frombuffer(nya_bytes, dtype=np.uint8).reshape((height, width, 4))
-
-def display_image_pixels(pixels: np.array, path: str) -> None:
-    plt.gcf().canvas.manager.set_window_title(path)
-    plt.imshow(pixels)
-    plt.axis('off')
-    plt.show()
     
 def convert_to_nya(image_path: str, output_dir: str) -> None:
     image_data = ImageData(image_path)
@@ -108,13 +117,3 @@ def convert_to_nya(image_path: str, output_dir: str) -> None:
         pixel_data = nparray_to_nya_bytes(image_data.pixels, image_data.width, image_data.height)
 
         f.write(pixel_data)
-
-def display_nya_file(nya_file: str) -> None:
-    with open(nya_file, "rb") as f:
-        width = int.from_bytes(f.read(16), byteorder="big")
-        height = int.from_bytes(f.read(16), byteorder="big")
-
-        pixel_data = f.read()
-        pixels = nya_bytes_to_nparray(pixel_data, width, height)
-
-        display_image_pixels(pixels, nya_file)
