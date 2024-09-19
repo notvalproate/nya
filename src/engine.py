@@ -140,20 +140,23 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
                 header.ALPHA_ENCODING = True
                 break
 
+    previous = np.array([255, 255, 255, 255])
+
     if not header.ALPHA_ENCODING:
         pixels = pixels[:, :, :3]
+        previous = np.array([255, 255, 255])
 
     ########################################
     # STAGE 2: APPLY THE DIFFERENCE FILTER #
     ########################################
 
-    # for row in pixels:
-    #     i = 0
-    #     while i < len(row):
-    #         diff = row[i] - previous
-    #         previous = row[i].copy()
-    #         row[i] = diff
-    #         i += 1
+    for row in pixels:
+        i = 0
+        while i < len(row):
+            diff = row[i] - previous
+            previous = row[i].copy()
+            row[i] = diff
+            i += 1
     
     #######################################################################################################################
     # STAGE 3: PERFORM RLE ENCODING AND STORE IT IN nya_pixels. nya_values WILL STORE THE COUNTS OF EACH DIFFERENCE/PIXEL #
@@ -196,6 +199,8 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
     root = None
 
     if len(nya_frequency) > 0:
+
+        header.HUFFMAN_CODED = True
 
         # STAGE 4.1: ELIMINATE COLORS THAT APPEAR ONLY ONCE AND LIMIT TO 256 COLORS
 
@@ -252,7 +257,7 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
 
             if color_tuple in nya_huffman_codes:
                 code = nya_huffman_codes[color_tuple]
-                
+
                 if isinstance(nya_pixels[ind], NYA_RUN):
                     nya_pixels[ind] = NYA_RUN_HUFFMAN(code, nya_pixels[ind].LENGTH)
                 else:
