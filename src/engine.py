@@ -21,7 +21,7 @@ class NYA_BLOCK(ABC):
 
 
 class NYA_SINGLE(NYA_BLOCK):
-    tag = bitarray([0, 0])
+    tag = bitarray([0])
 
     def __init__(self, value: NDArray[np.uint8]):
         self.VALUE = value
@@ -33,17 +33,24 @@ class NYA_SINGLE(NYA_BLOCK):
 
 
 class NYA_RUN(NYA_SINGLE):
-    tag = bitarray([0, 1])
+    tag = bitarray([1])
 
     def __init__(self, value: NDArray[np.uint8], length: int):
         super().__init__(value)
         self.LENGTH = length
 
     def to_bits(self) -> bitarray:
-        length_str = f'{self.LENGTH-1:06b}'
+        adjusted_length = self.LENGTH - 1
+        count_length = adjusted_length.bit_length()
+        length_length = count_length.bit_length()
+
+        count_str = f'{adjusted_length:0{count_length}b}'
+        length_str = f'{length_length:03b}'
+
         bits = self.tag.copy()
         bits.frombytes(self.VALUE.tobytes())
         bits.extend([int(bit) for bit in length_str])
+        bits.extend([int(bit) for bit in count_str])
         return bits
 
 
@@ -93,11 +100,8 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
                 header.ALPHA_ENCODING = True
                 break
 
-    previous = np.array([255, 255, 255, 255])
-
     if not header.ALPHA_ENCODING:
         pixels = pixels[:, :, :3]
-        previous = np.array([255, 255, 255])
 
     ########################################
     # STAGE 2: APPLY THE DIFFERENCE FILTER #
@@ -126,18 +130,23 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
     ind = 0
     pixel_count = len(pixels)
 
+    single_run_count = 0
+    run_run_count = 0
+
     while ind < pixel_count:
         curr_pixel = pixels[ind]
         length = 1
 
-        while ind + length < pixel_count and length <= 64 and np.array_equal(curr_pixel, pixels[ind + length]):
+        while ind + length < pixel_count and length <= 256 and np.array_equal(curr_pixel, pixels[ind + length]):
             length += 1
 
         if length == 1:
             nya_pixels.append(NYA_SINGLE(curr_pixel))
+            single_run_count += 1
         else:
             nya_pixels.append(NYA_RUN(curr_pixel, length))
             ind += length - 1
+            run_run_count += 1
 
         if tuple(pixels[ind]) in nya_values:
             nya_values[tuple(pixel)] += 1
@@ -168,6 +177,8 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
     # STAGE 6.2: ADD PIXELS
     for block in nya_pixels:
         nya_data.extend(block.to_bits())
+
+    print(f"Single Run Count: {single_run_count}, Run Run Count: {run_run_count}")
 
     return nya_data.tobytes()
     
