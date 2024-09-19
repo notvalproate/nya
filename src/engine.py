@@ -21,7 +21,7 @@ class NYA_BLOCK(ABC):
 
 
 class NYA_SINGLE(NYA_BLOCK):
-    tag = bitarray([0])
+    tag = bitarray([0, 0])
 
     def __init__(self, value: NDArray[np.uint8]):
         self.VALUE = value
@@ -33,7 +33,7 @@ class NYA_SINGLE(NYA_BLOCK):
 
 
 class NYA_RUN(NYA_SINGLE):
-    tag = bitarray([1])
+    tag = bitarray([0, 1])
 
     def __init__(self, value: NDArray[np.uint8], length: int):
         super().__init__(value)
@@ -130,9 +130,6 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
     ind = 0
     pixel_count = len(pixels)
 
-    single_run_count = 0
-    run_run_count = 0
-
     while ind < pixel_count:
         curr_pixel = pixels[ind]
         length = 1
@@ -142,22 +139,27 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
 
         if length == 1:
             nya_pixels.append(NYA_SINGLE(curr_pixel))
-            single_run_count += 1
         else:
             nya_pixels.append(NYA_RUN(curr_pixel, length))
             ind += length - 1
-            run_run_count += 1
 
-        if tuple(pixels[ind]) in nya_values:
-            nya_values[tuple(pixel)] += 1
+        color_tuple = tuple(int(x) for x in curr_pixel)
+
+        if color_tuple in nya_values:
+            nya_values[color_tuple] += length
         else:
-            nya_values[tuple(pixel)] = 1
+            nya_values[color_tuple] = length
 
         ind += 1
 
     ########################################################################
     # STAGE 4: PERFORM HUFFMAN ENCODING ON THE MOST COMMON 256 DIFFERENCES #
     ########################################################################
+
+    # Print column-wise with alignment
+    print("NYA VALUES:")
+    for key, value in nya_values.items():
+        print(f"{str(key).ljust(16)} : {value}")
 
     #####################################################################
     # STAGE 5: WRITE EVERYTHING TO A BITARRAY AND THEN RETURN THE BYTES #
@@ -177,8 +179,6 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
     # STAGE 6.2: ADD PIXELS
     for block in nya_pixels:
         nya_data.extend(block.to_bits())
-
-    print(f"Single Run Count: {single_run_count}, Run Run Count: {run_run_count}")
 
     return nya_data.tobytes()
     
