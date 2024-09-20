@@ -24,13 +24,28 @@ class HUFFMAN_NODE:
         
         return self.FREQUENCY == other.FREQUENCY
 
+# Frequency dict of random 20 characters
 frequencies = {
-    'A': 45,
-    'B': 13,
-    'C': 12,
-    'D': 16,
-    'E': 9,
-    'F': 5
+    'a': 5,
+    'b': 9,
+    'c': 12,
+    'd': 13,
+    'e': 16,
+    'f': 45,
+    'g': 1,
+    'h': 2,
+    'i': 3,
+    'j': 4,
+    'k': 6,
+    'l': 7,
+    'm': 8,
+    'n': 10,
+    'o': 11,
+    'p': 14,
+    'q': 15,
+    'r': 17,
+    's': 18,
+    't': 19
 }
 
 def make_huffman_codes(node: HUFFMAN_NODE, current_code: bitarray, huffman_codes: dict) -> None:
@@ -91,6 +106,10 @@ def create_huffman_tree() -> None:
 
     print(serialized)
 
+    import math
+
+    print(f'{math.ceil(len(serialized) / 8.0)} Bytes')
+
     with open('huffman_tree', 'wb') as file:
         file.write(serialized.tobytes())
 
@@ -144,5 +163,5 @@ def read_huffman_bin() -> None:
     for key, value in huffman_codes.items():
         print(f"{str(key).ljust(1)} : {value}")
 
-create_huffman_tree()
-read_huffman_bin()
+# create_huffman_tree()
+# read_huffman_bin()

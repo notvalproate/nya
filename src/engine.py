@@ -191,12 +191,13 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
 
         ind += 1
 
-    ########################################################################
-    # STAGE 4: PERFORM HUFFMAN ENCODING ON THE MOST COMMON 256 DIFFERENCES #
-    ########################################################################
+    ############################################################################################################
+    # STAGE 4: PERFORM HUFFMAN ENCODING ON THE MOST COMMON 256 DIFFERENCES WHILE SIMULTANEOUSLY SERIALIZING IT #
+    ############################################################################################################
 
     nya_frequency = {key: value for key, value in nya_frequency.items() if value > 1}
     root = None
+    serialized_tree = bitarray(endian="big")
 
     if len(nya_frequency) > 0:
 
@@ -244,9 +245,14 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
                 return
 
             if node.VALUE != None:
+                serialized_tree.append(1)
+                for channel in node.VALUE:
+                    serialized_tree.extend(format(channel, '08b'))
+
                 nya_huffman_codes[node.VALUE] = current_code.copy()
                 return
             
+            serialized_tree.append(0)
             make_huffman_codes(node.LEFT, current_code + bitarray([0]))
             make_huffman_codes(node.RIGHT, current_code + bitarray([1]))
 
@@ -273,28 +279,22 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
 
             ind += 1
 
-    #########################################
-    # STAGE 5: STORE THE TREE IN A BITARRAY #
-    #########################################
-
-
-
     #############################
-    # STAGE 6: RETURN THE BYTES #
+    # STAGE 5: RETURN THE BYTES #
     #############################
 
     nya_data = bitarray(endian="big")
 
-    # STAGE 6.1: ADD HEADER
+    # STAGE 5.1: ADD HEADER
 
     nya_data.extend(header.to_bits())
 
-    # STAGE 6.2: ADD HUFFMAN TREE IF NEEDED
+    # STAGE 5.2: ADD HUFFMAN TREE IF NEEDED
 
     if root != None:
-        pass
+        nya_data.extend(serialized_tree)
 
-    # STAGE 6.3: ADD PIXELS
+    # STAGE 5.3: ADD PIXELS
     for block in nya_pixels:
         nya_data.extend(block.to_bits())
 
