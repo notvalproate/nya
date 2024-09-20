@@ -20,16 +20,18 @@ class NYA_BLOCK(ABC):
 class NYA_HEADER(NYA_BLOCK):
     def __init__(self):
         self.ALPHA_ENCODING = False # ONE BIT
-        self.VERTICAL_ENCODING = False # ONE BIT
+        self.DIFF_FILTER = False # ONE BIT
         self.HUFFMAN_CODED = False # ONE BIT
         self.WIDTH = 0 # 16 BITS
+        self.HEIGHT = 0 # 16 BITS
 
     def to_bits(self) -> bitarray:
         bits = bitarray()
         bits.append(int(self.ALPHA_ENCODING))
-        bits.append(int(self.VERTICAL_ENCODING))
+        bits.append(int(self.DIFF_FILTER))
         bits.append(int(self.HUFFMAN_CODED))
         bits.frombytes(self.WIDTH.to_bytes(2, byteorder="big"))
+        bits.frombytes(self.HEIGHT.to_bytes(2, byteorder="big"))
         return bits
 
 
@@ -121,7 +123,7 @@ class NYA_HUFFMAN_NODE:
         return self.FREQUENCY == other.FREQUENCY
     
 
-def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
+def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
 
     ################################################################
     # STAGE 0: CREATE EMPTY HEADER WHICH WILL BE MODIFIED AS WE GO #
@@ -129,6 +131,7 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
 
     header = NYA_HEADER()
     header.WIDTH = width
+    header.HEIGHT = height
 
     ###########################################
     # STAGE 1: DECIDE BETWEEN 3 OR 4 CHANNELS #
@@ -146,9 +149,9 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
         pixels = pixels[:, :, :3]
         previous = np.array([255, 255, 255])
 
-    ########################################
-    # STAGE 2: APPLY THE DIFFERENCE FILTER #
-    ########################################
+    ##################################################
+    # STAGE 2: APPLY THE DIFFERENCE FILTER IF NEEDED #
+    ##################################################
 
     # for row in pixels:
     #     i = 0
@@ -210,9 +213,9 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
             sorted_nya_frequency = dict(sorted_nya_frequency[:256])
             nya_frequency = sorted_nya_frequency
         
-        print("NYA DICT", len(nya_frequency))
-        for key, value in nya_frequency.items():
-            print(f"{str(key).ljust(19)} : {value}")
+        # print("NYA DICT", len(nya_frequency))
+        # for key, value in nya_frequency.items():
+        #     print(f"{str(key).ljust(19)} : {value}")
             
         # STAGE 4.2: MAKE THE HEAP
 
@@ -295,12 +298,12 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
         nya_data.extend(serialized_tree)
 
     # STAGE 5.3: ADD PIXELS
+
     for block in nya_pixels:
         nya_data.extend(block.to_bits())
 
     import math
-
-    print(f'{math.ceil(len(nya_data) / 8.0)} Bytes')
+    print(f'Converted to {math.ceil(len(nya_data) / 8.0)} Bytes')
 
     return nya_data.tobytes()
 
@@ -315,7 +318,7 @@ def convert_to_nya(image_path: str, output_dir: str) -> bool:
     output_file = f'{output_dir}{os.sep}{file_name}.nya'
 
     with open(output_file, "wb") as f:
-        nya_data = nparray_to_nya_bytes(pixels, width)
+        nya_data = nparray_to_nya_bytes(pixels, width, height)
         f.write(nya_data)
 
     return True
