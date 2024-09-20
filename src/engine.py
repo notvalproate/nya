@@ -150,13 +150,13 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
     # STAGE 2: APPLY THE DIFFERENCE FILTER #
     ########################################
 
-    for row in pixels:
-        i = 0
-        while i < len(row):
-            diff = row[i] - previous
-            previous = row[i].copy()
-            row[i] = diff
-            i += 1
+    # for row in pixels:
+    #     i = 0
+    #     while i < len(row):
+    #         diff = row[i] - previous
+    #         previous = row[i].copy()
+    #         row[i] = diff
+    #         i += 1
     
     #######################################################################################################################
     # STAGE 3: PERFORM RLE ENCODING AND STORE IT IN nya_pixels. nya_values WILL STORE THE COUNTS OF EACH DIFFERENCE/PIXEL #
@@ -209,6 +209,10 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
             sorted_nya_frequency = dict(sorted_nya_frequency[:256])
             nya_frequency = sorted_nya_frequency
         
+        print("NYA DICT", len(nya_frequency))
+        for key, value in nya_frequency.items():
+            print(f"{str(key).ljust(19)} : {value}")
+            
         # STAGE 4.2: MAKE THE HEAP
 
         heap = []
@@ -248,6 +252,10 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
 
         make_huffman_codes(root, bitarray())
 
+        # print("NYA HUFFMAN CODES")
+        # for key, value in nya_huffman_codes.items():
+        #     print(f"{str(key).ljust(19)} : {value}")
+
         # STAGE 4.5: APPLY/USE THE HUFFMAN CODES BY REPLACING BLOCKS
 
         ind = 0
@@ -269,6 +277,8 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
     # STAGE 5: STORE THE TREE IN A BITARRAY #
     #########################################
 
+
+
     #############################
     # STAGE 6: RETURN THE BYTES #
     #############################
@@ -287,6 +297,10 @@ def nparray_to_nya_bytes(pixels: np.array, width: int) -> bytes:
     # STAGE 6.3: ADD PIXELS
     for block in nya_pixels:
         nya_data.extend(block.to_bits())
+
+    import math
+
+    print(f'{math.ceil(len(nya_data) / 8.0)} Bytes')
 
     return nya_data.tobytes()
 
