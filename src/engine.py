@@ -57,7 +57,7 @@ class NYA_RUN(NYA_SINGLE):
     def to_bits(self) -> bitarray:
         adjusted_length = self.LENGTH - 1
         count_length = adjusted_length.bit_length()
-        length_length = count_length.bit_length()
+        length_length = (count_length - 1).bit_length()
 
         count_str = f'{adjusted_length:0{count_length}b}'
         length_str = f'{length_length:03b}'
@@ -91,7 +91,7 @@ class NYA_RUN_HUFFMAN(NYA_SINGLE_HUFFMAN):
     def to_bits(self) -> bitarray:
         adjusted_length = self.LENGTH - 1
         count_length = adjusted_length.bit_length()
-        length_length = count_length.bit_length()
+        length_length = (count_length - 1).bit_length()
 
         count_str = f'{adjusted_length:0{count_length}b}'
         length_str = f'{length_length:03b}'
@@ -153,6 +153,8 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
     # STAGE 2: APPLY THE DIFFERENCE FILTER IF NEEDED #
     ##################################################
 
+    # pixels = np.swapaxes(pixels, 0, 1)
+
     # for row in pixels:
     #     i = 0
     #     while i < len(row):
@@ -175,6 +177,8 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
     nya_frequency = defaultdict(int)
     ind = 0
     pixel_count = len(pixels)
+    single_count = 0
+    rle_count = 0
 
     while ind < pixel_count:
         curr_pixel = pixels[ind]
@@ -185,14 +189,20 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
 
         if length == 1:
             nya_pixels.append(NYA_SINGLE(curr_pixel))
+            single_count += 1
         else:
             nya_pixels.append(NYA_RUN(curr_pixel, length))
             ind += length - 1
+            rle_count += 1
 
         color_tuple = tuple(int(x) for x in curr_pixel)
         nya_frequency[color_tuple] += 1
 
         ind += 1
+
+    print("NYA PIXELS: ", len(nya_pixels))
+    print("NYA SINGLE: ", single_count)
+    print("NYA RUN: ", rle_count)
 
     ############################################################################################################
     # STAGE 4: PERFORM HUFFMAN ENCODING ON THE MOST COMMON 256 DIFFERENCES WHILE SIMULTANEOUSLY SERIALIZING IT #
@@ -213,9 +223,9 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
             sorted_nya_frequency = dict(sorted_nya_frequency[:256])
             nya_frequency = sorted_nya_frequency
         
-        # print("NYA DICT", len(nya_frequency))
-        # for key, value in nya_frequency.items():
-        #     print(f"{str(key).ljust(19)} : {value}")
+        print("NYA DICT", len(nya_frequency))
+        for key, value in nya_frequency.items():
+            print(f"{str(key).ljust(19)} : {value}")
             
         # STAGE 4.2: MAKE THE HEAP
 
@@ -261,13 +271,15 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
 
         make_huffman_codes(root, bitarray())
 
-        # print("NYA HUFFMAN CODES")
-        # for key, value in nya_huffman_codes.items():
-        #     print(f"{str(key).ljust(19)} : {value}")
+        print("NYA HUFFMAN CODES")
+        for key, value in nya_huffman_codes.items():
+            print(f"{str(key).ljust(19)} : {value}")
 
         # STAGE 4.5: APPLY/USE THE HUFFMAN CODES BY REPLACING BLOCKS
 
         ind = 0
+        huffmanrle_count = 0
+        huffmansingle_count = 0
 
         while ind < len(nya_pixels):
             color_tuple = tuple(int(x) for x in nya_pixels[ind].VALUE)
@@ -277,10 +289,15 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
 
                 if isinstance(nya_pixels[ind], NYA_RUN):
                     nya_pixels[ind] = NYA_RUN_HUFFMAN(code, nya_pixels[ind].LENGTH)
+                    huffmanrle_count += 1
                 else:
                     nya_pixels[ind] = NYA_SINGLE_HUFFMAN(code)
+                    huffmansingle_count += 1
 
             ind += 1
+
+        print("NYA HUFFMAN PIXELS: ", len(nya_pixels))
+        print("NYA HUFFMAN SINGLE: ", huffmansingle_count)
 
     #############################
     # STAGE 5: RETURN THE BYTES #
@@ -303,7 +320,8 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
         nya_data.extend(block.to_bits())
 
     import math
-    print(f'Converted to {math.ceil(len(nya_data) / 8.0)} Bytes')
+    byte_size = math.ceil(len(nya_data) / 8.0)
+    print(f'Converted to {byte_size} Bytes | {byte_size / 1024} KB')
 
     return nya_data.tobytes()
 

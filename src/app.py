@@ -40,7 +40,7 @@ class NyaApp:
         select_frame.pack(expand=True)
 
         def get_file():
-            path = filedialog.askopenfilename(title="Select a file", filetypes=[("Image files", "*.png *.jpg *.jpeg")])
+            path = filedialog.askopenfilename(title="Select a file", filetypes=[("Image files", "*.png *.jpg *.jpeg *.webp")])
             if path:
                 self.current_file.set(os.path.normpath(path))
 
