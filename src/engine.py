@@ -19,17 +19,18 @@ class NYA_BLOCK(ABC):
 
 class NYA_HEADER(NYA_BLOCK):
     def __init__(self):
+        self.MAGIC = "NYA!"
         self.ALPHA_ENCODING = False # ONE BIT
-        self.DIFF_FILTER = False # ONE BIT
         self.HUFFMAN_CODED = False # ONE BIT
+        self.FILTER = 0 # TWO BITS
         self.WIDTH = 0 # 16 BITS
         self.HEIGHT = 0 # 16 BITS
 
     def to_bits(self) -> bitarray:
         bits = bitarray()
         bits.append(int(self.ALPHA_ENCODING))
-        bits.append(int(self.DIFF_FILTER))
         bits.append(int(self.HUFFMAN_CODED))
+        bits.extend(int(bit) for bit in f'{self.FILTER:02b}')
         bits.frombytes(self.WIDTH.to_bytes(2, byteorder="big"))
         bits.frombytes(self.HEIGHT.to_bytes(2, byteorder="big"))
         return bits
@@ -143,7 +144,7 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
                 header.ALPHA_ENCODING = True
                 break
 
-    previous = np.array([255, 255, 255, 255])
+    previous = np.array([0, 0, 0, 0])
 
     if not header.ALPHA_ENCODING:
         pixels = pixels[:, :, :3]
@@ -153,15 +154,17 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
     # STAGE 2: APPLY THE DIFFERENCE FILTER IF NEEDED #
     ##################################################
 
-    # pixels = np.swapaxes(pixels, 0, 1)
+    pixels = np.swapaxes(pixels, 0, 1)
 
-    # for row in pixels:
-    #     i = 0
-    #     while i < len(row):
-    #         diff = row[i] - previous
-    #         previous = row[i].copy()
-    #         row[i] = diff
-    #         i += 1
+    for row in pixels:
+        i = 0
+        while i < len(row):
+            diff = row[i] - previous
+            previous = row[i].copy()
+            row[i] = diff
+            i += 1
+
+    pixels = np.swapaxes(pixels, 0, 1)
     
     #######################################################################################################################
     # STAGE 3: PERFORM RLE ENCODING AND STORE IT IN nya_pixels. nya_values WILL STORE THE COUNTS OF EACH DIFFERENCE/PIXEL #
@@ -171,7 +174,7 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
     
     pixels = pixels.reshape(-1, pixels.shape[-1])
 
-    # STAGE 3.2: PERFORM THE RLE ENCODING
+    # # STAGE 3.2: PERFORM THE RLE ENCODING
 
     nya_pixels = []
     nya_frequency = defaultdict(int)
@@ -179,6 +182,7 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
     pixel_count = len(pixels)
     single_count = 0
     rle_count = 0
+    total_pixels = 0
 
     while ind < pixel_count:
         curr_pixel = pixels[ind]
@@ -190,23 +194,26 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
         if length == 1:
             nya_pixels.append(NYA_SINGLE(curr_pixel))
             single_count += 1
+            total_pixels += 1
         else:
             nya_pixels.append(NYA_RUN(curr_pixel, length))
             ind += length - 1
             rle_count += 1
+            total_pixels += length
 
         color_tuple = tuple(int(x) for x in curr_pixel)
         nya_frequency[color_tuple] += 1
 
         ind += 1
 
-    print("NYA PIXELS: ", len(nya_pixels))
-    print("NYA SINGLE: ", single_count)
-    print("NYA RUN: ", rle_count)
+    # print("NYA PIXELS: ", len(nya_pixels))
+    # print("NYA SINGLE: ", single_count)
+    # print("NYA RUN: ", rle_count)
+    # print("TOTAL PIXELS: ", total_pixels)
 
-    ############################################################################################################
-    # STAGE 4: PERFORM HUFFMAN ENCODING ON THE MOST COMMON 256 DIFFERENCES WHILE SIMULTANEOUSLY SERIALIZING IT #
-    ############################################################################################################
+    # ############################################################################################################
+    # # STAGE 4: PERFORM HUFFMAN ENCODING ON THE MOST COMMON 256 DIFFERENCES WHILE SIMULTANEOUSLY SERIALIZING IT #
+    # ############################################################################################################
 
     nya_frequency = {key: value for key, value in nya_frequency.items() if value > 1}
     root = None
@@ -223,9 +230,9 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
             sorted_nya_frequency = dict(sorted_nya_frequency[:256])
             nya_frequency = sorted_nya_frequency
         
-        print("NYA DICT", len(nya_frequency))
-        for key, value in nya_frequency.items():
-            print(f"{str(key).ljust(19)} : {value}")
+        # print("NYA DICT", len(nya_frequency))
+        # for key, value in nya_frequency.items():
+        #     print(f"{str(key).ljust(19)} : {value}")
             
         # STAGE 4.2: MAKE THE HEAP
 
@@ -271,9 +278,9 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
 
         make_huffman_codes(root, bitarray())
 
-        print("NYA HUFFMAN CODES")
-        for key, value in nya_huffman_codes.items():
-            print(f"{str(key).ljust(19)} : {value}")
+        # print("NYA HUFFMAN CODES")
+        # for key, value in nya_huffman_codes.items():
+        #     print(f"{str(key).ljust(19)} : {value}")
 
         # STAGE 4.5: APPLY/USE THE HUFFMAN CODES BY REPLACING BLOCKS
 
@@ -296,25 +303,26 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
 
             ind += 1
 
-        print("NYA HUFFMAN PIXELS: ", len(nya_pixels))
-        print("NYA HUFFMAN SINGLE: ", huffmansingle_count)
+        # print("NYA HUFFMAN PIXELS: ", len(nya_pixels))
+        # print("NYA HUFFMAN SINGLE: ", huffmansingle_count)
+        # print("NYA HUFFMAN RUN: ", huffmanrle_count)
 
-    #############################
-    # STAGE 5: RETURN THE BYTES #
-    #############################
+    # #############################
+    # # STAGE 5: RETURN THE BYTES #
+    # #############################
 
     nya_data = bitarray(endian="big")
 
-    # STAGE 5.1: ADD HEADER
+    # # STAGE 5.1: ADD HEADER
 
     nya_data.extend(header.to_bits())
 
-    # STAGE 5.2: ADD HUFFMAN TREE IF NEEDED
+    # # STAGE 5.2: ADD HUFFMAN TREE IF NEEDED
 
     if root != None:
         nya_data.extend(serialized_tree)
 
-    # STAGE 5.3: ADD PIXELS
+    # # STAGE 5.3: ADD PIXELS
 
     for block in nya_pixels:
         nya_data.extend(block.to_bits())
@@ -336,7 +344,9 @@ def convert_to_nya(image_path: str, output_dir: str) -> bool:
     output_file = f'{output_dir}{os.sep}{file_name}.nya'
 
     with open(output_file, "wb") as f:
+        print(file_name)
         nya_data = nparray_to_nya_bytes(pixels, width, height)
         f.write(nya_data)
+        pass
 
     return True
