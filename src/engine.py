@@ -140,11 +140,6 @@ def rle_encode_pixels(pixels: np.array) -> Tuple[List[NYA_SINGLE | NYA_RUN], def
     ind = 0
     pixel_count = len(pixels)
 
-    # COUNTS FOR DEBUGGING/TESTING
-    single_count = 0
-    rle_count = 0
-    total_pixels = 0
-
     while ind < pixel_count:
         curr_pixel = pixels[ind]
         length = 1
@@ -154,32 +149,145 @@ def rle_encode_pixels(pixels: np.array) -> Tuple[List[NYA_SINGLE | NYA_RUN], def
 
         if length == 1:
             nya_pixels.append(NYA_SINGLE(curr_pixel))
-            single_count += 1
-            total_pixels += 1
         else:
             nya_pixels.append(NYA_RUN(curr_pixel, length))
             ind += length - 1
-            rle_count += 1
-            total_pixels += length
 
         color_tuple = tuple(int(x) for x in curr_pixel)
         nya_frequencies[color_tuple] += 1
 
         ind += 1
-    
-    print("NYA PIXELS: ", len(nya_pixels))
-    print("NYA SINGLE: ", single_count)
-    print("NYA RUN: ", rle_count)
-    print("TOTAL PIXELS: ", total_pixels)
+
+    nya_frequencies = {key: value for key, value in nya_frequencies.items() if value > 1}
 
     return nya_pixels, nya_frequencies
 
 
-def none_encode_nya(src_pixels: np.array) -> bitarray:
-    pixels = src_pixels.copy()
+def huffman_code_pixels(nya_pixels: List[NYA_SINGLE | NYA_RUN], nya_frequencies: defaultdict) -> bitarray:
+    root = None
+    serialized_tree = bitarray(endian="big")
+
+    if len(nya_frequencies) > 256:
+        sorted_nya_frequency = sorted(nya_frequencies.items(), key=lambda x: x[1], reverse=True)
+        sorted_nya_frequency = dict(sorted_nya_frequency[:256])
+        nya_frequencies = sorted_nya_frequency
+
+    heap = []
+
+    for key in nya_frequencies:
+        node = NYA_HUFFMAN_NODE(key, nya_frequencies[key])
+        heapq.heappush(heap, node)
+
+    while len(heap) > 1:
+        left = heapq.heappop(heap)
+        right = heapq.heappop(heap)
+
+        parent = NYA_HUFFMAN_NODE(None, left.FREQUENCY + right.FREQUENCY)
+        parent.LEFT = left
+        parent.RIGHT = right
+
+        heapq.heappush(heap, parent)
+
+    nya_huffman_codes = {}
+    root = heapq.heappop(heap)
+
+    def make_huffman_codes(node: NYA_HUFFMAN_NODE, current_code: bitarray):
+        if node == None:
+            return
+
+        if node.VALUE != None:
+            serialized_tree.append(1)
+            for channel in node.VALUE:
+                serialized_tree.extend(format(channel, '08b'))
+
+            nya_huffman_codes[node.VALUE] = current_code.copy()
+            return
+        
+        serialized_tree.append(0)
+        make_huffman_codes(node.LEFT, current_code + bitarray([0]))
+        make_huffman_codes(node.RIGHT, current_code + bitarray([1]))
+
+    make_huffman_codes(root, bitarray())
+
+    ind = 0
+
+    while ind < len(nya_pixels):
+        color_tuple = tuple(int(x) for x in nya_pixels[ind].VALUE)
+
+        if color_tuple in nya_huffman_codes:
+            code = nya_huffman_codes[color_tuple]
+
+            if isinstance(nya_pixels[ind], NYA_RUN):
+                nya_pixels[ind] = NYA_RUN_HUFFMAN(code, nya_pixels[ind].LENGTH)
+            else:
+                nya_pixels[ind] = NYA_SINGLE_HUFFMAN(code)
+
+        ind += 1
+
+    return serialized_tree
+
+
+def encode_nya(pixels: np.array) -> Tuple[bitarray, bool]:
+    encoded = bitarray(endian="big")
+    is_huffman_coded = False
     pixels = pixels.reshape(-1, pixels.shape[-1])
 
     nya_pixels, nya_frequencies = rle_encode_pixels(pixels)
+
+    if len(nya_frequencies) > 0:
+        serialized_tree = huffman_code_pixels(nya_pixels, nya_frequencies)
+        encoded.extend(serialized_tree)
+        is_huffman_coded = True
+
+    for block in nya_pixels:
+        encoded.extend(block.to_bits())
+
+    return encoded, is_huffman_coded
+
+
+def none_encode_nya(src_pixels: np.array) -> Tuple[bitarray, bool]:
+    pixels = src_pixels.copy()
+    return encode_nya(pixels)
+
+
+def diff_encode_nya(src_pixels: np.array, alpha_encoded: bool) -> Tuple[bitarray, bool]:
+    pixels = src_pixels.copy()
+    previous = np.zeros(4, dtype=np.uint8) if alpha_encoded else np.array([255, 255, 255], dtype=np.uint8)
+
+    for row in pixels:
+        i = 0
+        while i < len(row):
+            diff = row[i] - previous
+            previous = row[i].copy()
+            row[i] = diff
+            i += 1
+
+    return encode_nya(pixels)
+
+
+def up_encode_nya(src_pixels: np.array, alpha_encoded: bool) -> Tuple[bitarray, bool]:
+    pixels = src_pixels.copy()
+    previous = np.zeros(4, dtype=np.uint8) if alpha_encoded else np.array([255, 255, 255], dtype=np.uint8)
+
+    pixels = np.swapaxes(pixels, 0, 1)
+
+    for row in pixels:
+        i = 0
+        while i < len(row):
+            diff = row[i] - previous
+            previous = row[i].copy()
+            row[i] = diff
+            i += 1
+
+    pixels = np.swapaxes(pixels, 0, 1)
+
+    return encode_nya(pixels)
+
+
+def get_bytes_string(bit_count: int) -> str:
+    import math
+    byte_size = math.ceil(bit_count / 8.0)
+    return f'{byte_size} Bytes | {byte_size / 1024} KB'
 
 
 def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
@@ -202,207 +310,51 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
                 header.ALPHA_ENCODING = True
                 break
 
-    previous = np.array([0, 0, 0, 0])
-
     if not header.ALPHA_ENCODING:
         pixels = pixels[:, :, :3]
-        previous = np.array([255, 255, 255])
 
     ##############################################################
     # STAGE 2: COMPRESS USING DIFFERENT FILTERS AND USE BEST ONE #
     ##############################################################
 
     # STAGE 2.1: FILTER 0 - NO FILTER
-
-    none_data = none_encode_nya(pixels)
+    none_data, none_is_huffman = none_encode_nya(pixels)
 
     # STAGE 2.2: FILTER 1 - DIFF
-
-    diff_data = diff_encode_nya(pixels, header.ALPHA_ENCODING)
+    diff_data, diff_is_huffman = diff_encode_nya(pixels, header.ALPHA_ENCODING)
 
     # STAGE 2.3: FILTER 2 - UP
-
-    up_data = up_encode_nya(pixels, header.ALPHA_ENCODING)
+    up_data, up_is_huffman = up_encode_nya(pixels, header.ALPHA_ENCODING)
 
     # STAGE 2.4: TAKE MINIMUM OF FILTER 0, 1, 2
 
+    print(f'NONE: {get_bytes_string(len(none_data))} \nDIFF: {get_bytes_string(len(diff_data))} \nUP: {get_bytes_string(len(up_data))}')
 
-    pixels = np.swapaxes(pixels, 0, 1)
+    final_data = none_data
+    header.HUFFMAN_CODED = none_is_huffman
 
-    for row in pixels:
-        i = 0
-        while i < len(row):
-            diff = row[i] - previous
-            previous = row[i].copy()
-            row[i] = diff
-            i += 1
+    if len(diff_data) < len(final_data):
+        final_data = diff_data
+        header.FILTER = 1
+        header.HUFFMAN_CODED = diff_is_huffman
 
-    pixels = np.swapaxes(pixels, 0, 1)
-    
-    #######################################################################################################################
-    # STAGE 3: PERFORM RLE ENCODING AND STORE IT IN nya_pixels. nya_values WILL STORE THE COUNTS OF EACH DIFFERENCE/PIXEL #
-    #######################################################################################################################
+    if len(up_data) < len(final_data):
+        final_data = up_data
+        header.FILTER = 2
+        header.HUFFMAN_CODED = up_is_huffman
 
-    # STAGE 3.1: FLATTEN PIXELS AND TREAT IT AS 1D ARRAY
-    
-    pixels = pixels.reshape(-1, pixels.shape[-1])
-
-    # # STAGE 3.2: PERFORM THE RLE ENCODING
-
-    nya_pixels = []
-    nya_frequency = defaultdict(int)
-    ind = 0
-    pixel_count = len(pixels)
-    single_count = 0
-    rle_count = 0
-    total_pixels = 0
-
-    while ind < pixel_count:
-        curr_pixel = pixels[ind]
-        length = 1
-
-        while ind + length < pixel_count and length <= 256 and np.array_equal(curr_pixel, pixels[ind + length]):
-            length += 1
-
-        if length == 1:
-            nya_pixels.append(NYA_SINGLE(curr_pixel))
-            single_count += 1
-            total_pixels += 1
-        else:
-            nya_pixels.append(NYA_RUN(curr_pixel, length))
-            ind += length - 1
-            rle_count += 1
-            total_pixels += length
-
-        color_tuple = tuple(int(x) for x in curr_pixel)
-        nya_frequency[color_tuple] += 1
-
-        ind += 1
-
-    # print("NYA PIXELS: ", len(nya_pixels))
-    # print("NYA SINGLE: ", single_count)
-    # print("NYA RUN: ", rle_count)
-    # print("TOTAL PIXELS: ", total_pixels)
-
-    # ############################################################################################################
-    # # STAGE 4: PERFORM HUFFMAN ENCODING ON THE MOST COMMON 256 DIFFERENCES WHILE SIMULTANEOUSLY SERIALIZING IT #
-    # ############################################################################################################
-
-    nya_frequency = {key: value for key, value in nya_frequency.items() if value > 1}
-    root = None
-    serialized_tree = bitarray(endian="big")
-
-    if len(nya_frequency) > 0:
-
-        header.HUFFMAN_CODED = True
-
-        # STAGE 4.1: ELIMINATE COLORS THAT APPEAR ONLY ONCE AND LIMIT TO 256 COLORS
-
-        if len(nya_frequency) > 256:
-            sorted_nya_frequency = sorted(nya_frequency.items(), key=lambda x: x[1], reverse=True)
-            sorted_nya_frequency = dict(sorted_nya_frequency[:256])
-            nya_frequency = sorted_nya_frequency
-        
-        # print("NYA DICT", len(nya_frequency))
-        # for key, value in nya_frequency.items():
-        #     print(f"{str(key).ljust(19)} : {value}")
-            
-        # STAGE 4.2: MAKE THE HEAP
-
-        heap = []
-
-        for key in nya_frequency:
-            node = NYA_HUFFMAN_NODE(key, nya_frequency[key])
-            heapq.heappush(heap, node)
-
-        # STAGE 4.3: MAKE THE HUFFMAN TREE
-
-        while len(heap) > 1:
-            left = heapq.heappop(heap)
-            right = heapq.heappop(heap)
-
-            parent = NYA_HUFFMAN_NODE(None, left.FREQUENCY + right.FREQUENCY)
-            parent.LEFT = left
-            parent.RIGHT = right
-
-            heapq.heappush(heap, parent)
-
-        # STAGE 4.4: MAKE THE HUFFMAN CODES
-
-        nya_huffman_codes = {}
-
-        root = heapq.heappop(heap)
-
-        def make_huffman_codes(node: NYA_HUFFMAN_NODE, current_code: bitarray):
-            if node == None:
-                return
-
-            if node.VALUE != None:
-                serialized_tree.append(1)
-                for channel in node.VALUE:
-                    serialized_tree.extend(format(channel, '08b'))
-
-                nya_huffman_codes[node.VALUE] = current_code.copy()
-                return
-            
-            serialized_tree.append(0)
-            make_huffman_codes(node.LEFT, current_code + bitarray([0]))
-            make_huffman_codes(node.RIGHT, current_code + bitarray([1]))
-
-        make_huffman_codes(root, bitarray())
-
-        # print("NYA HUFFMAN CODES")
-        # for key, value in nya_huffman_codes.items():
-        #     print(f"{str(key).ljust(19)} : {value}")
-
-        # STAGE 4.5: APPLY/USE THE HUFFMAN CODES BY REPLACING BLOCKS
-
-        ind = 0
-        huffmanrle_count = 0
-        huffmansingle_count = 0
-
-        while ind < len(nya_pixels):
-            color_tuple = tuple(int(x) for x in nya_pixels[ind].VALUE)
-
-            if color_tuple in nya_huffman_codes:
-                code = nya_huffman_codes[color_tuple]
-
-                if isinstance(nya_pixels[ind], NYA_RUN):
-                    nya_pixels[ind] = NYA_RUN_HUFFMAN(code, nya_pixels[ind].LENGTH)
-                    huffmanrle_count += 1
-                else:
-                    nya_pixels[ind] = NYA_SINGLE_HUFFMAN(code)
-                    huffmansingle_count += 1
-
-            ind += 1
-
-        # print("NYA HUFFMAN PIXELS: ", len(nya_pixels))
-        # print("NYA HUFFMAN SINGLE: ", huffmansingle_count)
-        # print("NYA HUFFMAN RUN: ", huffmanrle_count)
-
-    # #############################
-    # # STAGE 5: RETURN THE BYTES #
-    # #############################
-
+    #############################
+    # STAGE 3: RETURN THE BYTES #
+    #############################
     nya_data = bitarray(endian="big")
 
-    # # STAGE 5.1: ADD HEADER
-
+    # STAGE 3.1: ADD HEADER
     nya_data.extend(header.to_bits())
 
-    # # STAGE 5.2: ADD HUFFMAN TREE IF NEEDED
+    # STAGE 3.2: ADD PIXELS
+    nya_data.extend(final_data)
 
-    if root != None:
-        nya_data.extend(serialized_tree)
-
-    # # STAGE 5.3: ADD PIXELS
-
-    for block in nya_pixels:
-        nya_data.extend(block.to_bits())
-
-    import math
-    byte_size = math.ceil(len(nya_data) / 8.0)
-    print(f'Converted to {byte_size} Bytes | {byte_size / 1024} KB')
+    print(f'FINAL SIZE: {get_bytes_string(len(nya_data))}')
 
     return nya_data.tobytes()
     
@@ -416,6 +368,7 @@ def convert_to_nya(image_path: str, output_dir: str) -> bool:
     output_file = f'{output_dir}{os.sep}{file_name}.nya'
 
     with open(output_file, "wb") as f:
+        print(f'COMPRESSING TO FILE: {output_file}')
         nya_data = nparray_to_nya_bytes(pixels, width, height)
         f.write(nya_data)
         pass
