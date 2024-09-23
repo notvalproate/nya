@@ -1,6 +1,6 @@
 from numpy.typing import NDArray
 from abc import ABC, abstractmethod
-from typing import Tuple, Self
+from typing import Tuple, Self, List
 
 from PIL import Image
 import numpy as np
@@ -42,7 +42,7 @@ class NYA_HEADER(NYA_BLOCK):
         bits.append(int(self.ALPHA_ENCODING))
         bits.append(int(self.HUFFMAN_CODED))
         bits.extend(int(bit) for bit in f'{self.FILTER:02b}')
-        
+
         return bits
 
 
@@ -134,6 +134,54 @@ class NYA_HUFFMAN_NODE:
         return self.FREQUENCY == other.FREQUENCY
     
 
+def rle_encode_pixels(pixels: np.array) -> Tuple[List[NYA_SINGLE | NYA_RUN], defaultdict]:
+    nya_pixels = []
+    nya_frequencies = defaultdict(int)
+    ind = 0
+    pixel_count = len(pixels)
+
+    # COUNTS FOR DEBUGGING/TESTING
+    single_count = 0
+    rle_count = 0
+    total_pixels = 0
+
+    while ind < pixel_count:
+        curr_pixel = pixels[ind]
+        length = 1
+
+        while ind + length < pixel_count and length <= 256 and np.array_equal(curr_pixel, pixels[ind + length]):
+            length += 1
+
+        if length == 1:
+            nya_pixels.append(NYA_SINGLE(curr_pixel))
+            single_count += 1
+            total_pixels += 1
+        else:
+            nya_pixels.append(NYA_RUN(curr_pixel, length))
+            ind += length - 1
+            rle_count += 1
+            total_pixels += length
+
+        color_tuple = tuple(int(x) for x in curr_pixel)
+        nya_frequencies[color_tuple] += 1
+
+        ind += 1
+    
+    print("NYA PIXELS: ", len(nya_pixels))
+    print("NYA SINGLE: ", single_count)
+    print("NYA RUN: ", rle_count)
+    print("TOTAL PIXELS: ", total_pixels)
+
+    return nya_pixels, nya_frequencies
+
+
+def none_encode_nya(src_pixels: np.array) -> bitarray:
+    pixels = src_pixels.copy()
+    pixels = pixels.reshape(-1, pixels.shape[-1])
+
+    nya_pixels, nya_frequencies = rle_encode_pixels(pixels)
+
+
 def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
 
     ################################################################
@@ -160,9 +208,24 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
         pixels = pixels[:, :, :3]
         previous = np.array([255, 255, 255])
 
-    ##################################################
-    # STAGE 2: APPLY THE DIFFERENCE FILTER IF NEEDED #
-    ##################################################
+    ##############################################################
+    # STAGE 2: COMPRESS USING DIFFERENT FILTERS AND USE BEST ONE #
+    ##############################################################
+
+    # STAGE 2.1: FILTER 0 - NO FILTER
+
+    none_data = none_encode_nya(pixels)
+
+    # STAGE 2.2: FILTER 1 - DIFF
+
+    diff_data = diff_encode_nya(pixels, header.ALPHA_ENCODING)
+
+    # STAGE 2.3: FILTER 2 - UP
+
+    up_data = up_encode_nya(pixels, header.ALPHA_ENCODING)
+
+    # STAGE 2.4: TAKE MINIMUM OF FILTER 0, 1, 2
+
 
     pixels = np.swapaxes(pixels, 0, 1)
 
@@ -342,7 +405,6 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
     print(f'Converted to {byte_size} Bytes | {byte_size / 1024} KB')
 
     return nya_data.tobytes()
-
     
 def convert_to_nya(image_path: str, output_dir: str) -> bool:
     img = Image.open(image_path)
@@ -354,7 +416,6 @@ def convert_to_nya(image_path: str, output_dir: str) -> bool:
     output_file = f'{output_dir}{os.sep}{file_name}.nya'
 
     with open(output_file, "wb") as f:
-        print(file_name)
         nya_data = nparray_to_nya_bytes(pixels, width, height)
         f.write(nya_data)
         pass
