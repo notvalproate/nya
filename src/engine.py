@@ -20,19 +20,29 @@ class NYA_BLOCK(ABC):
 class NYA_HEADER(NYA_BLOCK):
     def __init__(self):
         self.MAGIC = "NYA!"
-        self.ALPHA_ENCODING = False # ONE BIT
-        self.HUFFMAN_CODED = False # ONE BIT
-        self.FILTER = 0 # TWO BITS
+
         self.WIDTH = 0 # 16 BITS
         self.HEIGHT = 0 # 16 BITS
 
+        self.PADDING = bitarray([0, 0, 0, 0])
+        self.ALPHA_ENCODING = False # ONE BIT
+        self.HUFFMAN_CODED = False # ONE BIT
+        self.FILTER = 0 # TWO BITS
+
     def to_bits(self) -> bitarray:
         bits = bitarray()
+
+        for char in self.MAGIC:
+            bits.extend([int(bit) for bit in f'{ord(char):08b}'])
+
+        bits.frombytes(self.WIDTH.to_bytes(2, byteorder="big"))
+        bits.frombytes(self.HEIGHT.to_bytes(2, byteorder="big"))
+
+        bits.extend(self.PADDING)
         bits.append(int(self.ALPHA_ENCODING))
         bits.append(int(self.HUFFMAN_CODED))
         bits.extend(int(bit) for bit in f'{self.FILTER:02b}')
-        bits.frombytes(self.WIDTH.to_bytes(2, byteorder="big"))
-        bits.frombytes(self.HEIGHT.to_bytes(2, byteorder="big"))
+        
         return bits
 
 
