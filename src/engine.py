@@ -371,6 +371,5 @@ def convert_to_nya(image_path: str, output_dir: str) -> bool:
         print(f'COMPRESSING TO FILE: {output_file}')
         nya_data = nparray_to_nya_bytes(pixels, width, height)
         f.write(nya_data)
-        pass
 
     return True
