@@ -54,6 +54,9 @@ int main(int argc, char* argv[]) {
         destRect.h = destRect.w / widthToHeightRatio;
     }
 
+    destRect.x = (WINDOW_WIDTH - destRect.w) / 2;
+    destRect.y = (WINDOW_HEIGHT - destRect.h) / 2;
+
     while(true) {
         SDL_Event event;
 
