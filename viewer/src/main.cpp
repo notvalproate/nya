@@ -16,6 +16,7 @@ void initWindow();
 void initRenderer();
 SDL_Surface* createSurfaceFromPixelData(int width, int height, uint32_t* pixelData);
 SDL_Texture* createTextureFromSurface(SDL_Surface* surface);
+void cleanup();
 
 int main(int argc, char* argv[]) {
     if (argc != 2) {
@@ -29,24 +30,33 @@ int main(int argc, char* argv[]) {
     initWindow();
     initRenderer();
 
-    NYAImage image = NYADecoder::decodeFromPath(nyaFilepath);
-    SDL_Surface* surface = createSurfaceFromPixelData(image.width, image.height, image.pixels);
+    NYAImage* image = NYADecoder::decodeFromPath(nyaFilepath);
+
+    if (!image) {
+        std::cerr << "Failed to decode NYA image" << std::endl;
+        cleanup();
+        return 1;
+    }
+
+    float widthToHeightRatio = (float) image->width / (float) image->height;
+    SDL_Surface* surface = createSurfaceFromPixelData(image->width, image->height, image->pixels);
     SDL_Texture* texture = createTextureFromSurface(surface);
 
-    SDL_Event event;
+    SDL_FreeSurface(surface);
+    delete image;
 
-    float ratio = (float) image.width / (float) image.height;
     SDL_Rect destRect = {0, 0, 0, 0};
-
     destRect.h = WINDOW_HEIGHT - WINDOW_PADDING;
-    destRect.w = destRect.h * ratio;
+    destRect.w = destRect.h * widthToHeightRatio;
 
     if (destRect.w > WINDOW_WIDTH - WINDOW_PADDING) {
         destRect.w = WINDOW_WIDTH - WINDOW_PADDING;
-        destRect.h = destRect.w / ratio;
+        destRect.h = destRect.w / widthToHeightRatio;
     }
 
     while(true) {
+        SDL_Event event;
+
         if (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 break;
@@ -61,7 +71,8 @@ int main(int argc, char* argv[]) {
         SDL_RenderPresent(renderer);
     }
 
-    SDL_Quit();
+    SDL_DestroyTexture(texture);
+    cleanup();
     return 0;
 }
 
@@ -116,4 +127,10 @@ SDL_Texture* createTextureFromSurface(SDL_Surface* surface) {
     }
 
     return texture;
+}
+
+void cleanup() {
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 }

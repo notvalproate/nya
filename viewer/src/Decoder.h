@@ -4,6 +4,10 @@ struct NYAImage {
     uint32_t width;
     uint32_t height;
     uint32_t* pixels;
+
+    ~NYAImage() {
+        delete[] pixels;
+    }
 };
 
 struct NYAHuffmanNode {
@@ -15,5 +19,5 @@ struct NYAHuffmanNode {
 
 class NYADecoder {
 public:
-    static NYAImage decodeFromPath(const std::filesystem::path& path);
+    static NYAImage* decodeFromPath(const std::filesystem::path& path);
 };
