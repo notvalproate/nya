@@ -4,8 +4,10 @@
 #include <fstream>
 #include <cstring>
 #include <functional>
+#include <iomanip>
 
 NYAHuffmanNode* NYADecoder::huffmanRoot = nullptr;
+int NYADecoder::colorDepth = NYA_RGB;
 
 NYAImage* NYADecoder::decodeFromPath(const std::filesystem::path& path) {
     if (path.extension() != ".nya") {
@@ -27,6 +29,10 @@ NYAImage* NYADecoder::decodeFromPath(const std::filesystem::path& path) {
         return nullptr;
     }
 
+    if (header.flags & NYA_FLAG_ALPHA) {
+        colorDepth = NYA_RGBA;
+    }
+
     BitReader reader(nyaFile);
     buildHuffmanTree(reader);
 
@@ -37,6 +43,7 @@ NYAImage* NYADecoder::decodeFromPath(const std::filesystem::path& path) {
 
     std::cout << "Decoding image..." << std::endl;
 
+    deleteHuffmanTree(huffmanRoot);
     return image;
 }
 
@@ -51,7 +58,6 @@ void NYADecoder::buildHuffmanTree(BitReader& reader) {
         return getAncestorWithEmptyRight(node->parent);
     };
 
-    NYA_Byte byte;
     huffmanRoot = new NYAHuffmanNode();
     NYAHuffmanNode* currentNode = huffmanRoot;
 
@@ -59,10 +65,15 @@ void NYADecoder::buildHuffmanTree(BitReader& reader) {
         NYA_Bit bit = reader.readBit();
 
         if (bit) {
-            currentNode->value = reader.readBits(32);
-            currentNode = getAncestorWithEmptyRight(currentNode);
+            currentNode->value = reader.readBits(colorDepth);
 
-            if (currentNode->right == nullptr) {
+            if (colorDepth == NYA_RGB) {
+                currentNode->value = (currentNode->value << 8) | 0xFF;
+            }
+
+            currentNode = getAncestorWithEmptyRight(currentNode->parent);
+
+            if (currentNode == nullptr) {
                 break;
             }
 
@@ -75,4 +86,14 @@ void NYADecoder::buildHuffmanTree(BitReader& reader) {
             currentNode = currentNode->left;
         }
     }
+}
+
+void NYADecoder::deleteHuffmanTree(NYAHuffmanNode* node) {
+    if (node == nullptr) {
+        return;
+    }
+
+    deleteHuffmanTree(node->left);
+    deleteHuffmanTree(node->right);
+    delete node;
 }

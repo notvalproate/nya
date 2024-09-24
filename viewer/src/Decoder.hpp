@@ -1,6 +1,11 @@
 #include <filesystem>
 #include <fstream>
 
+#define NYA_MAGIC "NYA!"
+#define NYA_FLAG_ALPHA 0x04
+#define NYA_RGB 24
+#define NYA_RGBA 32
+
 typedef bool NYA_Bit;
 typedef uint8_t NYA_Byte;
 typedef uint16_t NYA_Word;
@@ -22,9 +27,9 @@ struct NYAHeader {
 };
 
 struct NYAImage {
-    NYA_Word width;
-    NYA_Word height;
-    NYA_DWord* pixels;
+    NYA_Word width = 0;
+    NYA_Word height = 0;
+    NYA_DWord* pixels = nullptr;
 
     ~NYAImage() {
         delete[] pixels;
@@ -32,10 +37,10 @@ struct NYAImage {
 };
 
 struct NYAHuffmanNode {
-    NYA_DWord value;
-    NYAHuffmanNode* left;
-    NYAHuffmanNode* right;
-    NYAHuffmanNode* parent;
+    NYA_DWord value = 0;
+    NYAHuffmanNode* left = nullptr;
+    NYAHuffmanNode* right = nullptr;
+    NYAHuffmanNode* parent = nullptr; 
 };
 
 #include "BitReader.hpp"
@@ -45,5 +50,7 @@ public:
     static NYAImage* decodeFromPath(const std::filesystem::path& path);
 private:
     static void buildHuffmanTree(BitReader& reader);
+    static void deleteHuffmanTree(NYAHuffmanNode* node);
     static NYAHuffmanNode* huffmanRoot;
+    static int colorDepth;
 };
