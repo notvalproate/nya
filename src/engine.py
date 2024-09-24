@@ -34,8 +34,8 @@ class NYA_HEADER(NYA_BLOCK):
         for char in self.MAGIC:
             bits.extend([int(bit) for bit in f'{ord(char):08b}'])
 
-        bits.frombytes(self.WIDTH.to_bytes(2, byteorder="big"))
-        bits.frombytes(self.HEIGHT.to_bytes(2, byteorder="big"))
+        bits.frombytes(self.WIDTH.to_bytes(2, byteorder="little"))
+        bits.frombytes(self.HEIGHT.to_bytes(2, byteorder="little"))
 
         bits.extend(self.PADDING)
         bits.append(int(self.ALPHA_ENCODING))
