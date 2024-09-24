@@ -1,38 +1,56 @@
 #include <SDL2/SDL.h>
 #include <iostream>
 
-int main(int argc, char* argv[]) {
-    SDL_Init(SDL_INIT_VIDEO);
+SDL_Window* window = nullptr;
+SDL_Renderer* renderer = nullptr;
 
-    SDL_DisplayMode displayMode;
-    SDL_GetCurrentDisplayMode(0, &displayMode);
-    SDL_Window* window = SDL_CreateWindow("Hello World!", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+void initSdl() {
+    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+        std::cerr << "Error initializing SDL: " << SDL_GetError() << std::endl;
+        exit(1);
+    }
+}
+
+void initWindow() {
+    window = SDL_CreateWindow("nyaviewer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1100, 780, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
     if (window == nullptr) {
         std::cerr << "Error creating window: " << SDL_GetError() << std::endl;
-        return 1;
+        SDL_Quit();
+        exit(1);
     }
+}
 
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+void initRenderer() {
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
     if (renderer == nullptr) {
         std::cerr << "Error creating renderer: " << SDL_GetError() << std::endl;
-        return 1;
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        exit(1);
     }
+}
+
+int main(int argc, char* argv[]) {
+    initSdl();
+    initWindow();
+    initRenderer();
+
+    SDL_Event event;
 
     while(true) {
-        SDL_Event event;
         if (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 break;
             }
         }
 
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_SetRenderDrawColor(renderer, 25, 25, 25, 255);
         SDL_RenderClear(renderer);
         SDL_RenderPresent(renderer);
-
     }
 
+    SDL_Quit();
     return 0;
 }
