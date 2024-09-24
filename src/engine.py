@@ -178,6 +178,8 @@ def huffman_code_pixels(nya_pixels: List[NYA_SINGLE | NYA_RUN], nya_frequencies:
         node = NYA_HUFFMAN_NODE(key, nya_frequencies[key])
         heapq.heappush(heap, node)
 
+    # FIX HERE IF THERE IS ONLY ONE COLOR
+
     while len(heap) > 1:
         left = heapq.heappop(heap)
         right = heapq.heappop(heap)
@@ -353,6 +355,15 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
 
     # STAGE 3.2: ADD PIXELS
     nya_data.extend(final_data)
+
+    # STAGE 3.3: ADD PADDING
+    padding = 8 - (len(nya_data) % 8)
+    nya_data.extend([0] * padding)
+
+    # STAGE 3.4: ADD BYTE STREAM END "0x00 0x00 : 3"
+    nya_data.extend([0] * 16)
+    for char in ':3':
+        nya_data.extend([int(bit) for bit in f'{ord(char):08b}'])
 
     print(f'FINAL SIZE: {get_bytes_string(len(nya_data))}')
 
