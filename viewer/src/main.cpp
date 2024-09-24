@@ -1,8 +1,12 @@
 #include <SDL2/SDL.h>
 #include <iostream>
+#include <filesystem>
+
+#include "Decoder.h"
 
 constexpr int WINDOW_WIDTH = 1100;
 constexpr int WINDOW_HEIGHT = 780;
+constexpr int WINDOW_PADDING = 20;
 
 SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
@@ -14,11 +18,33 @@ SDL_Surface* createSurfaceFromPixelData(int width, int height, uint32_t* pixelDa
 SDL_Texture* createTextureFromSurface(SDL_Surface* surface);
 
 int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        std::cerr << "Wrong number of arguments. Only valid number is 2" << std::endl;
+        return 1;
+    }
+
+    std::filesystem::path nyaFilepath(argv[1]);
+    
     initSdl();
     initWindow();
     initRenderer();
 
+    NYAImage image = NYADecoder::decodeFromPath(nyaFilepath);
+    SDL_Surface* surface = createSurfaceFromPixelData(image.width, image.height, image.pixels);
+    SDL_Texture* texture = createTextureFromSurface(surface);
+
     SDL_Event event;
+
+    float ratio = (float) image.width / (float) image.height;
+    SDL_Rect destRect = {0, 0, 0, 0};
+
+    destRect.h = WINDOW_HEIGHT - WINDOW_PADDING;
+    destRect.w = destRect.h * ratio;
+
+    if (destRect.w > WINDOW_WIDTH - WINDOW_PADDING) {
+        destRect.w = WINDOW_WIDTH - WINDOW_PADDING;
+        destRect.h = destRect.w / ratio;
+    }
 
     while(true) {
         if (SDL_PollEvent(&event)) {
@@ -29,6 +55,9 @@ int main(int argc, char* argv[]) {
 
         SDL_SetRenderDrawColor(renderer, 25, 25, 25, 255);
         SDL_RenderClear(renderer);
+
+        SDL_RenderCopy(renderer, texture, nullptr, &destRect);
+
         SDL_RenderPresent(renderer);
     }
 
