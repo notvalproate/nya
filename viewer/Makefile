@@ -1,6 +1,10 @@
+# REPLACE THESE TWO WITH YOUR OWN SDL2 PATHS
+SDL_INCLUDE = -IC:\dev\libraries\SDL2\dev\SDL2-2.30.7\x86_64-w64-mingw32\include
+SDL_LIB = -LC:\dev\libraries\SDL2\dev\SDL2-2.30.7\x86_64-w64-mingw32\lib
+
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -Wpedantic -IC:\dev\libraries\SDL2\dev\SDL2-2.30.7\x86_64-w64-mingw32\include
-LDFLAGS = -LC:\dev\libraries\SDL2\dev\SDL2-2.30.7\x86_64-w64-mingw32\lib -lmingw32 -lSDL2main -lSDL2
+CXXFLAGS = -std=c++17 -Wall -Wextra -Wpedantic -I$(SDL_INCLUDE)
+LDFLAGS = -L$(SDL_LIB) -lmingw32 -lSDL2main -lSDL2 -mwindows
 
 SRC_DIR = src
 BUILD_DIR = build
@@ -21,5 +25,11 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp | $(BUILD_DIR)
 $(BUILD_DIR):
 	mkdir $(BUILD_DIR)
 
+ifeq ($(OS),Windows_NT)
+    CLEAN_COMMAND := del /Q /S
+else
+    CLEAN_COMMAND := rm -rf
+endif
+
 clean:
-	rm -rf $(BUILD_DIR)
+	$(CLEAN_COMMAND) build
