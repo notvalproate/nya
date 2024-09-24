@@ -2,7 +2,7 @@
 #include <iostream>
 #include <filesystem>
 
-#include "Decoder.h"
+#include "Decoder.hpp"
 
 constexpr int WINDOW_WIDTH = 1100;
 constexpr int WINDOW_HEIGHT = 780;

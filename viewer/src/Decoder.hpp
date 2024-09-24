@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <fstream>
 
 typedef bool NYA_Bit;
 typedef uint8_t NYA_Byte;
@@ -37,10 +38,12 @@ struct NYAHuffmanNode {
     NYAHuffmanNode* parent;
 };
 
+#include "BitReader.hpp"
+
 class NYADecoder {
 public:
     static NYAImage* decodeFromPath(const std::filesystem::path& path);
 private:
-    static void buildHuffmanTree(std::ifstream& file);
+    static void buildHuffmanTree(BitReader& reader);
     static NYAHuffmanNode* huffmanRoot;
 };
