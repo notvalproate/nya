@@ -24,9 +24,8 @@ class NYA_HEADER(NYA_BLOCK):
         self.WIDTH = 0 # 16 BITS
         self.HEIGHT = 0 # 16 BITS
 
-        self.PADDING = bitarray([0, 0, 0, 0])
+        self.PADDING = bitarray([0, 0, 0, 0, 0])
         self.ALPHA_ENCODING = False # ONE BIT
-        self.HUFFMAN_CODED = False # ONE BIT
         self.FILTER = 0 # TWO BITS
 
     def to_bits(self) -> bitarray:
@@ -40,7 +39,6 @@ class NYA_HEADER(NYA_BLOCK):
 
         bits.extend(self.PADDING)
         bits.append(int(self.ALPHA_ENCODING))
-        bits.append(int(self.HUFFMAN_CODED))
         bits.extend(int(bit) for bit in f'{self.FILTER:02b}')
 
         return bits
@@ -236,10 +234,9 @@ def encode_nya(pixels: np.array) -> Tuple[bitarray, bool]:
 
     nya_pixels, nya_frequencies = rle_encode_pixels(pixels)
 
-    if len(nya_frequencies) > 0:
-        serialized_tree = huffman_code_pixels(nya_pixels, nya_frequencies)
-        encoded.extend(serialized_tree)
-        is_huffman_coded = True
+    serialized_tree = huffman_code_pixels(nya_pixels, nya_frequencies)
+    encoded.extend(serialized_tree)
+    is_huffman_coded = True
 
     for block in nya_pixels:
         encoded.extend(block.to_bits())
