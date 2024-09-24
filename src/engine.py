@@ -164,7 +164,7 @@ def rle_encode_pixels(pixels: np.array) -> Tuple[List[NYA_SINGLE | NYA_RUN], def
 def huffman_code_pixels(nya_pixels: List[NYA_SINGLE | NYA_RUN], nya_frequencies: defaultdict) -> bitarray:
     root = None
     serialized_tree = bitarray(endian="big")
-
+  
     if len(nya_frequencies) > 256:
         sorted_nya_frequency = sorted(nya_frequencies.items(), key=lambda x: x[1], reverse=True)
         sorted_nya_frequency = dict(sorted_nya_frequency[:256])
@@ -176,7 +176,10 @@ def huffman_code_pixels(nya_pixels: List[NYA_SINGLE | NYA_RUN], nya_frequencies:
         node = NYA_HUFFMAN_NODE(key, nya_frequencies[key])
         heapq.heappush(heap, node)
 
-    # FIX HERE IF THERE IS ONLY ONE COLOR
+    if len(nya_frequencies) == 1:
+        for key in nya_frequencies:
+            node = NYA_HUFFMAN_NODE(key, nya_frequencies[key])
+            heapq.heappush(heap, node)
 
     while len(heap) > 1:
         left = heapq.heappop(heap)
