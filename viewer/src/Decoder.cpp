@@ -6,7 +6,7 @@
 #include <functional>
 #include <iomanip>
 
-void (*NYADecoder::NYAFunctions[4])(BitReader&, NYAImage*, NYA_DWord&) = {
+void (*NYADecoder::NYAFunctions[NYA_BLOCK_TYPE_COUNT])(BitReader&, NYAImage*, NYA_DWord&) = {
     &decodeNYASingle,
     &decodeNYARun,
     &decodeNYAHuffmanSingle,
@@ -36,7 +36,7 @@ NYAImage* NYADecoder::decodeFromPath(const std::filesystem::path& path) {
 
     NYAHeader header(nyaFile);
 
-    if (strncmp(reinterpret_cast<const char*>(&header.magic), "NYA!", 4) != 0) {
+    if (strncmp(reinterpret_cast<const char*>(&header.magic), "NYA!", NYA_MAGIC_LENGTH) != 0) {
         std::cerr << "File specified is either corrupted or not a valid NYA file" << std::endl;
         return nullptr;
     }
@@ -64,7 +64,7 @@ NYAImage* NYADecoder::decodeFromPath(const std::filesystem::path& path) {
     NYA_DWord pixelIndex = 0;
 
     while (pixelIndex < pixelCount) {
-        auto tag = reader.readBits(2);
+        auto tag = reader.readBits(NYA_TAG_LENGTH);
         NYAFunctions[tag](reader, image, pixelIndex);
     }
 
@@ -85,7 +85,7 @@ void NYADecoder::decodeNYASingle(BitReader& reader, NYAImage* image, NYA_DWord& 
 
 void NYADecoder::decodeNYARun(BitReader& reader, NYAImage* image, NYA_DWord& pixelIndex) {
     NYA_DWord value = readPixelValue(reader);
-    auto length = reader.readBits(3) + 1;
+    auto length = reader.readBits(NYA_LENGTH_BITCOUNT) + 1;
     auto run = reader.readBits(length) + 1;
 
     for (NYA_DWord i = 0; i < run; i++) {
@@ -104,7 +104,7 @@ void NYADecoder::decodeNYAHuffmanSingle(BitReader& reader, NYAImage* image, NYA_
 
 void NYADecoder::decodeNYAHuffmanRun(BitReader& reader, NYAImage* image, NYA_DWord& pixelIndex) {
     NYA_DWord value = readHuffmanValue(reader);
-    auto length = reader.readBits(3) + 1;
+    auto length = reader.readBits(NYA_LENGTH_BITCOUNT) + 1;
     auto run = reader.readBits(length) + 1;
 
     for (NYA_DWord i = 0; i < run; i++) {
@@ -163,7 +163,7 @@ NYA_DWord NYADecoder::readPixelValue(BitReader& reader) {
     NYA_DWord value = reader.readBits(colorDepth);
 
     if (colorDepth == NYA_RGB) {
-        value = (value << 8) | 0xFF;
+        value = (value << 8) | NYA_BYTE_MASK;
     }
 
     return value;
@@ -184,7 +184,7 @@ NYA_DWord NYADecoder::readHuffmanValue(BitReader& reader) {
 }
 
 NYA_DWord NYADecoder::transformIndex(NYA_DWord index) {
-    if (filterType == 2) {
+    if (filterType == NYA_FILTER_UP) {
         return (width * (index % height)) + (index / height);
     }
     return index;
@@ -199,27 +199,27 @@ void NYADecoder::applyFilter(NYAImage* image, NYA_DWord pixelCount) {
         NYA_DWord index = transformIndex(i);
         NYA_DWord currentValue = image->pixels[index];
 
-        NYA_Byte prevRed = (previousValue >> 24) & 0xFF;
-        NYA_Byte prevGreen = (previousValue >> 16) & 0xFF;
-        NYA_Byte prevBlue = (previousValue >> 8) & 0xFF;
+        NYA_Byte prevR = (previousValue >> NYA_SHIFT_R) & NYA_BYTE_MASK;
+        NYA_Byte prevG = (previousValue >> NYA_SHIFT_G) & NYA_BYTE_MASK;
+        NYA_Byte prevB = (previousValue >> NYA_SHIFT_B) & NYA_BYTE_MASK;
 
-        NYA_Byte currRed = (currentValue >> 24) & 0xFF;
-        NYA_Byte currGreen = (currentValue >> 16) & 0xFF;
-        NYA_Byte currBlue = (currentValue >> 8) & 0xFF;
+        NYA_Byte currR = (currentValue >> NYA_SHIFT_R) & NYA_BYTE_MASK;
+        NYA_Byte currG = (currentValue >> NYA_SHIFT_G) & NYA_BYTE_MASK;
+        NYA_Byte currB = (currentValue >> NYA_SHIFT_B) & NYA_BYTE_MASK;
 
-        NYA_Byte red = (prevRed + currRed) & 0xFF;
-        NYA_Byte green = (prevGreen + currGreen) & 0xFF;
-        NYA_Byte blue = (prevBlue + currBlue) & 0xFF;
+        NYA_Byte r = (prevR + currR) & NYA_BYTE_MASK;
+        NYA_Byte g = (prevG + currG) & NYA_BYTE_MASK;
+        NYA_Byte b = (prevB + currB) & NYA_BYTE_MASK;
 
-        currentValue = (red << 24) | (green << 16) | (blue << 8) | 0xFF;
+        currentValue = (r << NYA_SHIFT_R) | (g << NYA_SHIFT_G) | (b << NYA_SHIFT_B) | NYA_BYTE_MASK;
 
         if (colorDepth == NYA_RGBA) {
-            NYA_Byte prevAlpha = previousValue & 0xFF;
-            NYA_Byte currAlpha = currentValue & 0xFF;
+            NYA_Byte prevA = previousValue & NYA_BYTE_MASK;
+            NYA_Byte currA = currentValue & NYA_BYTE_MASK;
 
-            NYA_Byte alpha = (prevAlpha + currAlpha) & 0xFF;
+            NYA_Byte a = (prevA + currA) & NYA_BYTE_MASK;
 
-            currentValue = (currentValue & 0xFFFFFF00) | alpha;
+            currentValue = (currentValue & NYA_RGB_MASK) | a;
         }
 
         image->pixels[index] = currentValue;
