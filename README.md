@@ -25,4 +25,4 @@ python ./src/main.py
 - Now simply double click on any **.nya** file to open it
 
 ### Specification
-Read the specification [here](https://github.com/user-attachments/files/17111097/NYA.IMAGE.FORMAT.SPECIFICATION.pdf)
+Read the specification [here](https://github.com/user-attachments/files/17126200/NYA.IMAGE.FORMAT.SPECIFICATION.pdf)
