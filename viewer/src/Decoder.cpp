@@ -72,8 +72,6 @@ NYAImage* NYADecoder::decodeFromPath(const std::filesystem::path& path) {
 }
 
 void NYADecoder::decodeNYASingle(BitReader& reader, NYAImage* image, NYA_QWord& pixelIndex) {
-    static int count = 0;
-
     NYA_QWord value = readPixelValue(reader);
     image->pixels[transformIndex(pixelIndex)] = value;
 
@@ -81,8 +79,6 @@ void NYADecoder::decodeNYASingle(BitReader& reader, NYAImage* image, NYA_QWord& 
 }
 
 void NYADecoder::decodeNYARun(BitReader& reader, NYAImage* image, NYA_QWord& pixelIndex) {
-    static int count = 0;
-
     NYA_QWord value = readPixelValue(reader);
     auto length = reader.readBits(3) + 1;
     auto run = reader.readBits(length) + 1;
