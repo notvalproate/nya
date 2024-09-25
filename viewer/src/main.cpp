@@ -94,6 +94,13 @@ void initWindow() {
         SDL_Quit();
         exit(1);
     }
+
+    NYAImage* icon = NYADecoder::decodeFromPath("./assets/icon.nya");
+    SDL_Surface* iconSurface = createSurfaceFromPixelData(icon->width, icon->height, icon->pixels);
+
+    delete icon;
+    SDL_SetWindowIcon(window, iconSurface);
+    SDL_FreeSurface(iconSurface);
 }
 
 void initRenderer() {
