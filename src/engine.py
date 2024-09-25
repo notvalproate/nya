@@ -161,10 +161,15 @@ def rle_encode_pixels(pixels: np.array) -> Tuple[List[NYA_SINGLE | NYA_RUN], def
     return nya_pixels, nya_frequencies
 
 
-def huffman_code_pixels(nya_pixels: List[NYA_SINGLE | NYA_RUN], nya_frequencies: defaultdict) -> bitarray:
+def huffman_code_pixels(nya_pixels: List[NYA_SINGLE | NYA_RUN], nya_frequencies: defaultdict, depth: int) -> bitarray:
     root = None
     serialized_tree = bitarray(endian="big")
-  
+
+    # ADD TO SPECIFICATION
+    if len(nya_frequencies) == 0:
+        nya_frequencies[(255,) * depth] = 2
+        nya_frequencies[(0,) * depth] = 3
+
     if len(nya_frequencies) > 256:
         sorted_nya_frequency = sorted(nya_frequencies.items(), key=lambda x: x[1], reverse=True)
         sorted_nya_frequency = dict(sorted_nya_frequency[:256])
@@ -237,7 +242,7 @@ def encode_nya(pixels: np.array) -> Tuple[bitarray, bool]:
 
     nya_pixels, nya_frequencies = rle_encode_pixels(pixels)
 
-    serialized_tree = huffman_code_pixels(nya_pixels, nya_frequencies)
+    serialized_tree = huffman_code_pixels(nya_pixels, nya_frequencies, len(nya_pixels[0].VALUE))
     encoded.extend(serialized_tree)
     is_huffman_coded = True
 

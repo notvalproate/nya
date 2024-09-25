@@ -2,15 +2,24 @@
 #include <fstream>
 
 #define NYA_MAGIC "NYA!"
+
 #define NYA_FLAG_ALPHA 0x04
+#define NYA_FILTER_MASK 0x03
+
+#define NYA_FILTER_NONE 0
+#define NYA_FILTER_SUB 1
+#define NYA_FILTER_UP 2
+
 #define NYA_RGB 24
 #define NYA_RGBA 32
+
+#define NYA_PREVIOUS_RGB 0xFFFFFFFF
+#define NYA_PREVIOUS_RGBA 0x00000000
 
 typedef bool NYA_Bit;
 typedef uint8_t NYA_Byte;
 typedef uint16_t NYA_Word;
 typedef uint32_t NYA_DWord;
-typedef uint64_t NYA_QWord;
 
 struct NYAHeader {
     NYA_Byte magic[4];
@@ -49,21 +58,24 @@ class NYADecoder {
 public:
     static NYAImage* decodeFromPath(const std::filesystem::path& path);
 private:
-    static void decodeNYASingle(BitReader& reader, NYAImage* image, NYA_QWord& pixelIndex);
-    static void decodeNYARun(BitReader& reader, NYAImage* image, NYA_QWord& pixelIndex);
-    static void decodeNYAHuffmanSingle(BitReader& reader, NYAImage* image, NYA_QWord& pixelIndex);
-    static void decodeNYAHuffmanRun(BitReader& reader, NYAImage* image, NYA_QWord& pixelIndex);
+    static void decodeNYASingle(BitReader& reader, NYAImage* image, NYA_DWord& pixelIndex);
+    static void decodeNYARun(BitReader& reader, NYAImage* image, NYA_DWord& pixelIndex);
+    static void decodeNYAHuffmanSingle(BitReader& reader, NYAImage* image, NYA_DWord& pixelIndex);
+    static void decodeNYAHuffmanRun(BitReader& reader, NYAImage* image, NYA_DWord& pixelIndex);
 
     static void buildHuffmanTree(BitReader& reader);
     static void deleteHuffmanTree(NYAHuffmanNode* node);
 
-    static NYA_QWord readPixelValue(BitReader& reader);
-    static NYA_QWord readHuffmanValue(BitReader& reader);
+    static NYA_DWord readPixelValue(BitReader& reader);
+    static NYA_DWord readHuffmanValue(BitReader& reader);
     static NYA_DWord transformIndex(NYA_DWord index);
+
+    static void applyFilter(NYAImage* image, NYA_DWord pixelCount);
 
     static NYAHuffmanNode* huffmanRoot;
     static int colorDepth;
     static int filterType;
-    static NYA_QWord width, height;
-    static void (*NYAFunctions[4])(BitReader&, NYAImage*, NYA_QWord&);
+    static NYA_Word width, height;
+    static NYA_DWord previousValue;
+    static void (*NYAFunctions[4])(BitReader&, NYAImage*, NYA_DWord&);
 };
