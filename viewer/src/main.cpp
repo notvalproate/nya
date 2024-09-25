@@ -57,6 +57,13 @@ int main(int argc, char* argv[]) {
     destRect.x = (WINDOW_WIDTH - destRect.w) / 2;
     destRect.y = (WINDOW_HEIGHT - destRect.h) / 2;
 
+    SDL_SetRenderDrawColor(renderer, 25, 25, 25, 255);
+    SDL_RenderClear(renderer);
+
+    SDL_RenderCopy(renderer, texture, nullptr, &destRect);
+
+    SDL_RenderPresent(renderer);
+    
     while(true) {
         SDL_Event event;
 
@@ -65,13 +72,6 @@ int main(int argc, char* argv[]) {
                 break;
             }
         }
-
-        SDL_SetRenderDrawColor(renderer, 25, 25, 25, 255);
-        SDL_RenderClear(renderer);
-
-        SDL_RenderCopy(renderer, texture, nullptr, &destRect);
-
-        SDL_RenderPresent(renderer);
     }
 
     SDL_DestroyTexture(texture);
