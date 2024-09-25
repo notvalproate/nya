@@ -53,6 +53,7 @@ class NYA_SINGLE(NYA_BLOCK):
     def to_bits(self) -> bitarray:
         bits = self.tag.copy()
         bits.frombytes(self.VALUE.tobytes())
+
         return bits
 
 
@@ -87,6 +88,7 @@ class NYA_SINGLE_HUFFMAN(NYA_BLOCK):
     def to_bits(self) -> bitarray:
         bits = self.tag.copy()
         bits.extend(self.CODE)
+
         return bits
 
 
@@ -142,7 +144,7 @@ def rle_encode_pixels(pixels: np.array) -> Tuple[List[NYA_SINGLE | NYA_RUN], def
         curr_pixel = pixels[ind]
         length = 1
 
-        while ind + length < pixel_count and length <= 256 and np.array_equal(curr_pixel, pixels[ind + length]):
+        while ind + length < pixel_count and length < 256 and np.array_equal(curr_pixel, pixels[ind + length]):
             length += 1
 
         if length == 1:
