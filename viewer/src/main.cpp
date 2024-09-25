@@ -87,7 +87,7 @@ void initSdl() {
 }
 
 void initWindow(char* argv[]) {
-    window = SDL_CreateWindow("nyaviewer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+    window = SDL_CreateWindow("nyaviewer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
 
     if (window == nullptr) {
         std::cerr << "Error creating window: " << SDL_GetError() << std::endl;
