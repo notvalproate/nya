@@ -4,14 +4,14 @@ SDL_LIB := C:\dev\libraries\SDL2\dev\SDL2-2.30.7\x86_64-w64-mingw32\lib
 
 ifeq ($(OS),Windows_NT)
     CLEAN_COMMAND := del /Q /S
-	WINDOWS_FLAG := -mwindows
+	WINDOWS_FLAG := 
 else
     CLEAN_COMMAND := rm -rf
 	WINDOWS_FLAG :=
 endif
 
 CXX := g++
-CXXFLAGS := -std=c++17 -Wall -Wextra -Wpedantic -I$(SDL_INCLUDE)
+CXXFLAGS := -std=c++17 -Wall -Wextra -Wpedantic -O3 -I$(SDL_INCLUDE)
 LDFLAGS := -L$(SDL_LIB) -lmingw32 -lSDL2main -lSDL2 $(WINDOWS_FLAG)
 
 SRC_DIR := src
