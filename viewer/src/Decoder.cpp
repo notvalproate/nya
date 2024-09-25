@@ -4,7 +4,6 @@
 #include <fstream>
 #include <cstring>
 #include <functional>
-#include <iomanip>
 
 void (*NYADecoder::NYAFunctions[NYA_BLOCK_TYPE_COUNT])(BitReader&, NYAImage*, NYA_DWord&) = {
     &decodeNYASingle,

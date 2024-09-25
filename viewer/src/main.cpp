@@ -12,7 +12,7 @@ SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
 
 void initSdl();
-void initWindow();
+void initWindow(char* argv[]);
 void initRenderer();
 SDL_Surface* createSurfaceFromPixelData(int width, int height, uint32_t* pixelData);
 SDL_Texture* createTextureFromSurface(SDL_Surface* surface);
@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
     std::filesystem::path nyaFilepath(argv[1]);
     
     initSdl();
-    initWindow();
+    initWindow(argv);
     initRenderer();
 
     NYAImage* image = NYADecoder::decodeFromPath(nyaFilepath);
@@ -86,7 +86,7 @@ void initSdl() {
     }
 }
 
-void initWindow() {
+void initWindow(char* argv[]) {
     window = SDL_CreateWindow("nyaviewer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
     if (window == nullptr) {
@@ -95,7 +95,10 @@ void initWindow() {
         exit(1);
     }
 
-    NYAImage* icon = NYADecoder::decodeFromPath("./assets/icon.nya");
+    std::filesystem::path exePath = std::filesystem::absolute(std::filesystem::path(argv[0]));
+    std::filesystem::path iconPath = exePath.parent_path() / "assets" / "icon.nya";
+
+    NYAImage* icon = NYADecoder::decodeFromPath(iconPath);
     SDL_Surface* iconSurface = createSurfaceFromPixelData(icon->width, icon->height, icon->pixels);
 
     delete icon;
