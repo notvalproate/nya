@@ -10,7 +10,7 @@ pip install -r requirements.txt
 python ./src/main.py
 ```
 ## To Open .nya Files
-- Get the latest release: `git clone https://github.com/notvalproate/nya/releases`
+- Get the latest release from https://github.com/notvalproate/nya/releases
 
 **Method 1:**
 - Navigate to the folder in your preferred terminal: `cd nya`
