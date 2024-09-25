@@ -12,7 +12,7 @@ endif
 
 CXX := g++
 CXXFLAGS := -std=c++17 -Wall -Wextra -Wpedantic -I$(SDL_INCLUDE)
-LDFLAGS := -L$(SDL_LIB) -lmingw32 -lSDL2main -lSDL2
+LDFLAGS := -L$(SDL_LIB) -lmingw32 -lSDL2main -lSDL2 $(WINDOWS_FLAG)
 
 SRC_DIR := src
 BUILD_DIR := build

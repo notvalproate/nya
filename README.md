@@ -10,16 +10,16 @@ pip install -r requirements.txt
 python ./src/main.py
 ```
 ## To Open .nya Files
-- Clone the repo: `git clone https://github.com/notvalproate/nya`
+- Get the latest release: `git clone https://github.com/notvalproate/nya/releases`
 
 **Method 1:**
-- Navigate to the repository in your preferred terminal: `cd nya`
-- Run the executable followed by the filepath to the nya file: `nyaviewer.exe ./outputs/test.nya`
+- Navigate to the folder in your preferred terminal: `cd nya`
+- Run the executable followed by the filepath to the nya file: `nyaviewer.exe C:/dev/outputs/test.nya`
 
 **Method 2:**
 - Right click on any **.nya** file, and then click on `Properties`
 - In the `Opens With:` option, select `Change`
-- Navigate to the repository and select `nya.exe` as the application
+- Navigate to the repository and select `nyaviewer.exe` as the application
 - Click `Apply` and close the window
 - Now simply double click on any **.nya** file to open it
 
@@ -31,6 +31,7 @@ python ./src/main.py
 **Steps**
 - Switch to the viewer folder: `cd viewer`
 - Edit the Makefile and replace `SDL_INCLUDE` and `SDL_LIB` with your paths
+- Paste the SDL2.dll into the viewer directory
 - Edit any other parameters to your liking
 - Make the project: `make`
 - Run and test the viewer: `./nyaviewer.exe ../outputs/icon.nya`
