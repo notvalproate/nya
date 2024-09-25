@@ -65,16 +65,18 @@ class NYA_RUN(NYA_SINGLE):
 
     def to_bits(self) -> bitarray:
         adjusted_length = self.LENGTH - 1
-        count_length = adjusted_length.bit_length()
-        length_length = (count_length - 1).bit_length()
+        count_length = adjusted_length.bit_length() - 1
 
+        length_str = f'{count_length:03b}'
         count_str = f'{adjusted_length:0{count_length}b}'
-        length_str = f'{length_length:03b}'
 
         bits = self.tag.copy()
         bits.frombytes(self.VALUE.tobytes())
         bits.extend([int(bit) for bit in length_str])
         bits.extend([int(bit) for bit in count_str])
+
+        print(bits)
+
         return bits
 
 
@@ -99,16 +101,16 @@ class NYA_RUN_HUFFMAN(NYA_SINGLE_HUFFMAN):
 
     def to_bits(self) -> bitarray:
         adjusted_length = self.LENGTH - 1
-        count_length = adjusted_length.bit_length()
-        length_length = (count_length - 1).bit_length()
+        count_length = adjusted_length.bit_length() - 1
 
+        length_str = f'{count_length:03b}'
         count_str = f'{adjusted_length:0{count_length}b}'
-        length_str = f'{length_length:03b}'
 
         bits = self.tag.copy()
         bits.extend(self.CODE)
         bits.extend([int(bit) for bit in length_str])
         bits.extend([int(bit) for bit in count_str])
+
         return bits
     
 
@@ -220,10 +222,10 @@ def huffman_code_pixels(nya_pixels: List[NYA_SINGLE | NYA_RUN], nya_frequencies:
         if color_tuple in nya_huffman_codes:
             code = nya_huffman_codes[color_tuple]
 
-            if isinstance(nya_pixels[ind], NYA_RUN):
-                nya_pixels[ind] = NYA_RUN_HUFFMAN(code, nya_pixels[ind].LENGTH)
-            else:
-                nya_pixels[ind] = NYA_SINGLE_HUFFMAN(code)
+            # if isinstance(nya_pixels[ind], NYA_RUN):
+            #     nya_pixels[ind] = NYA_RUN_HUFFMAN(code, nya_pixels[ind].LENGTH)
+            # else:
+            #     nya_pixels[ind] = NYA_SINGLE_HUFFMAN(code)
 
         ind += 1
 
@@ -243,6 +245,8 @@ def encode_nya(pixels: np.array) -> Tuple[bitarray, bool]:
 
     for block in nya_pixels:
         encoded.extend(block.to_bits())
+
+    print(encoded)
 
     return encoded, is_huffman_coded
 
@@ -323,27 +327,27 @@ def nparray_to_nya_bytes(pixels: np.array, width: int, height: int) -> bytes:
     none_data, none_is_huffman = none_encode_nya(pixels)
 
     # STAGE 2.2: FILTER 1 - DIFF
-    diff_data, diff_is_huffman = diff_encode_nya(pixels, header.ALPHA_ENCODING)
+    # diff_data, diff_is_huffman = diff_encode_nya(pixels, header.ALPHA_ENCODING)
 
     # STAGE 2.3: FILTER 2 - UP
-    up_data, up_is_huffman = up_encode_nya(pixels, header.ALPHA_ENCODING)
+    # up_data, up_is_huffman = up_encode_nya(pixels, header.ALPHA_ENCODING)
 
     # STAGE 2.4: TAKE MINIMUM OF FILTER 0, 1, 2
 
-    print(f'NONE: {get_bytes_string(len(none_data))} \nDIFF: {get_bytes_string(len(diff_data))} \nUP: {get_bytes_string(len(up_data))}')
+    # print(f'NONE: {get_bytes_string(len(none_data))} \nDIFF: {get_bytes_string(len(diff_data))} \nUP: {get_bytes_string(len(up_data))}')
 
     final_data = none_data
     header.HUFFMAN_CODED = none_is_huffman
 
-    if len(diff_data) < len(final_data):
-        final_data = diff_data
-        header.FILTER = 1
-        header.HUFFMAN_CODED = diff_is_huffman
+    # if len(diff_data) < len(final_data):
+    #     final_data = diff_data
+    #     header.FILTER = 1
+    #     header.HUFFMAN_CODED = diff_is_huffman
 
-    if len(up_data) < len(final_data):
-        final_data = up_data
-        header.FILTER = 2
-        header.HUFFMAN_CODED = up_is_huffman
+    # if len(up_data) < len(final_data):
+    #     final_data = up_data
+    #     header.FILTER = 2
+    #     header.HUFFMAN_CODED = up_is_huffman
 
     #############################
     # STAGE 3: RETURN THE BYTES #

@@ -49,8 +49,21 @@ class NYADecoder {
 public:
     static NYAImage* decodeFromPath(const std::filesystem::path& path);
 private:
+    static void decodeNYASingle(BitReader& reader, NYAImage* image, NYA_QWord& pixelIndex);
+    static void decodeNYARun(BitReader& reader, NYAImage* image, NYA_QWord& pixelIndex);
+    static void decodeNYAHuffmanSingle(BitReader& reader, NYAImage* image, NYA_QWord& pixelIndex);
+    static void decodeNYAHuffmanRun(BitReader& reader, NYAImage* image, NYA_QWord& pixelIndex);
+
     static void buildHuffmanTree(BitReader& reader);
     static void deleteHuffmanTree(NYAHuffmanNode* node);
+
+    static NYA_QWord readPixelValue(BitReader& reader);
+    static NYA_QWord readHuffmanValue(BitReader& reader);
+    static NYA_DWord transformIndex(NYA_DWord index);
+
     static NYAHuffmanNode* huffmanRoot;
     static int colorDepth;
+    static int filterType;
+    static NYA_QWord width, height;
+    static void (*NYAFunctions[4])(BitReader&, NYAImage*, NYA_QWord&);
 };
