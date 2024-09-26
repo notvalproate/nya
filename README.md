@@ -1,6 +1,6 @@
 # NYA
 
-**N**anological **Y**eildable **A**sset is a simple and clean file format that makes use of a **Run Length Encoding** + **Huffman Coding** algorithm applied on an selectively filtered image. **NYA** encodes using one of three filter types: *None*, *Difference* and *Up*. With a 9 byte header (4 magic bytes "NYA!" + 2 bytes width + 2 bytes height + 1 byte flags), **.nya** files support a maximum image size of **65,536 x 65,536** pixels in RGB (3-channel) or RGBA (4-channel, transparency).
+**N**anological **Y**eildable **A**sset is a simple and clean lossless image file format that makes use of a **Run Length Encoding** + **Huffman Coding** algorithm applied on an selectively filtered image. **NYA** encodes using one of three filter types: *None*, *Difference* and *Up*. With a 9 byte header (4 magic bytes "NYA!" + 2 bytes width + 2 bytes height + 1 byte flags), **.nya** files support a maximum image size of **65,536 x 65,536** pixels in RGB (3-channel) or RGBA (4-channel, transparency).
 
 ## To Run The Converter
 ```
