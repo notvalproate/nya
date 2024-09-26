@@ -31,16 +31,12 @@ NYAImage* NYADecoder::decodeFromPath(const std::filesystem::path& path) {
         return nullptr;
     }
 
-    std::cout << "Attempting Decoding image..." << std::endl;
-
     NYAHeader header(nyaFile);
 
     if (strncmp(reinterpret_cast<const char*>(&header.magic), "NYA!", NYA_MAGIC_LENGTH) != 0) {
         std::cerr << "File specified is either corrupted or not a valid NYA file" << std::endl;
         return nullptr;
     }
-
-    std::cout << "Decoding valid NYA image..." << std::endl;
 
     if (header.flags & NYA_FLAG_ALPHA) {
         colorDepth = NYA_RGBA;
@@ -67,10 +63,9 @@ NYAImage* NYADecoder::decodeFromPath(const std::filesystem::path& path) {
         NYAFunctions[tag](reader, image, pixelIndex);
     }
 
+    // BARELY TAKES TIME, ITS FINE
     applyFilter(image, pixelCount);
     deleteHuffmanTree(huffmanRoot);
-
-    std::cout << std::endl << "Image decoded!" << std::endl;
 
     return image;
 }

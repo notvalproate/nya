@@ -19,12 +19,3 @@ uint32_t BitReader::readBits(int n) {
     }
     return result;
 }
-
-void BitReader::setPosition(std::streampos pos) {
-    m_FileStream.seekg(pos);
-    m_BitPos = 8;
-}
-
-std::streampos BitReader::getPosition() {
-    return m_FileStream.tellg();
-}
