@@ -20,6 +20,8 @@ SDL_Texture* createTextureFromSurface(SDL_Surface* surface);
 void cleanup();
 
 int main(int argc, char* argv[]) {
+    std::cout << "Something" << std::endl;
+
     if (argc != 2) {
         std::cerr << "Wrong number of arguments. Only valid number is 2" << std::endl;
         return 1;
