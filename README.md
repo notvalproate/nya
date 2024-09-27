@@ -27,13 +27,17 @@ python ./src/main.py
 **Prerequisites**
 - SDL2 Installed. Get it from [here](https://github.com/libsdl-org/SDL/releases)
 - GNU Compiler Collection ( >= GCC 8.0 )
+- CMake ( >= CMake 3.0 )
 
 **Steps**
 - Switch to the viewer folder: `cd viewer`
-- Edit the Makefile and replace `SDL_INCLUDE` and `SDL_LIB` with your paths
-- Paste the SDL2.dll into the viewer directory
-- Edit any other parameters to your liking
+- Create a build folder: `mkdir build`
+- Go into the build folder: `cd build`
+- Move into it and run cmake: `cmake ..`
 - Make the project: `make`
+- Place your `SDL2.dll` in the folder with the executable
+- Go back to viewer folder: `cd ..`
 - Run and test the viewer: `./nyaviewer.exe ../outputs/icon.nya`
+
 ### Specification
 Read the specification [here](https://github.com/user-attachments/files/17126200/NYA.IMAGE.FORMAT.SPECIFICATION.pdf)
