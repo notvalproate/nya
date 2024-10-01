@@ -39,5 +39,18 @@ python ./src/main.py
 - Go back to viewer folder: `cd ..`
 - Run and test the viewer: `./nyaviewer.exe ../outputs/icon.nya`
 
+## Install nyaviewer
+**Prerequisites**
+- Same as Build prerequisites
+
+**Steps**
+- Switch to the viewer folder: `cd viewer`
+- Create a build folder: `mkdir build`
+- Go into the build folder: `cd build`
+- Move into it and run cmake: `cmake ..`
+- Install nyaviewer: `make install`
+
+**NOTE:** nyaviewer will be installed to your default install path. On windows you will still have to copy the SDL2.dll to the installed nyaviewer folder for the program to run.
+
 ### Specification
 Read the specification [here](https://github.com/user-attachments/files/17126200/NYA.IMAGE.FORMAT.SPECIFICATION.pdf)
