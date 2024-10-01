@@ -32,7 +32,16 @@ set(SOURCES
     src/main.cpp
 )
 
-add_executable(nyaviewer ${SOURCES})
+if (WIN32)
+    enable_language("RC")
+    set (WIN32_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/nyaviewer.rc)
+
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(CMAKE_INSTALL_PREFIX "C:/Program Files/nyaviewer" CACHE PATH "Set the install path prefix" FORCE)
+    endif()
+endif()
+
+add_executable(nyaviewer ${SOURCES} ${WIN32_RESOURCES})
 
 target_include_directories(nyaviewer 
     PRIVATE
@@ -43,4 +52,14 @@ target_link_libraries(nyaviewer
     PRIVATE 
         nyadecoder
         ${SDL2_LIBRARIES}
+)
+
+# INSTALL RULES
+
+install(TARGETS nyaviewer
+    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}
+)
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/assets
+    DESTINATION ${CMAKE_INSTALL_PREFIX}
 )
