@@ -204,17 +204,16 @@ void NYADecoder::applyFilter(NYAImage* image, NYA_DWord pixelCount) {
         NYA_Byte r = (prevR + currR) & NYA_BYTE_MASK;
         NYA_Byte g = (prevG + currG) & NYA_BYTE_MASK;
         NYA_Byte b = (prevB + currB) & NYA_BYTE_MASK;
-
-        currentValue = (r << NYA_SHIFT_R) | (g << NYA_SHIFT_G) | (b << NYA_SHIFT_B) | NYA_BYTE_MASK;
+        NYA_Byte a = NYA_BYTE_MASK;
 
         if (colorDepth == NYA_RGBA) {
             NYA_Byte prevA = previousValue & NYA_BYTE_MASK;
             NYA_Byte currA = currentValue & NYA_BYTE_MASK;
 
-            NYA_Byte a = (prevA + currA) & NYA_BYTE_MASK;
-
-            currentValue = (currentValue & NYA_RGB_MASK) | a;
+            a = (prevA + currA) & NYA_BYTE_MASK;
         }
+
+        currentValue = (r << NYA_SHIFT_R) | (g << NYA_SHIFT_G) | (b << NYA_SHIFT_B) | a;
 
         image->pixels[index] = currentValue;
         previousValue = currentValue;
